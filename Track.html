@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>grumb — Track Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shop-common.css">
+<style>
+  /* lookup */
+  .lookup{padding:8px 40px 50px;max-width:760px}
+  .lookup .row{display:flex;gap:12px;border:1px solid var(--line);padding:8px 8px 8px 20px;align-items:center}
+  .lookup .row input{flex:1;height:48px;border:0;background:transparent;font:13px/1 'Space Mono';letter-spacing:.1em;color:var(--ink)}
+  .lookup .row input:focus{outline:0}
+  .lookup .row .btn{flex:0 0 auto}
+  .lookup .hint{margin-top:12px;font:11px/1.4 'Space Mono';color:var(--mute)}
+  .lookup .hint a{color:var(--rust);border-bottom:1px solid var(--rust)}
+  .lookup .hint.bad{color:var(--rust)}
+
+  .trackBody{display:none}
+  .trackBody.show{display:block}
+
+  /* header band */
+  .ohead{display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center;padding:30px 40px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--ink);color:var(--paper)}
+  .ohead .l .eyebrow{color:#9c968a}
+  .ohead .l h2{font-family:'Bebas Neue';font-size:80px;line-height:.86;margin-top:8px}
+  .ohead .l h2 em{font-family:'DM Serif Display';font-style:italic;color:var(--rust);font-size:.5em}
+  .ohead .l .meta{display:flex;gap:30px;margin-top:14px;font:11px/1.5 'Space Mono';letter-spacing:.12em;text-transform:uppercase;color:rgba(244,241,236,.6)}
+  .ohead .l .meta b{color:var(--paper);font-weight:400}
+  .ohead .r{text-align:right}
+  .ohead .r .eta-lbl{font:10px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:rgba(244,241,236,.6)}
+  .ohead .r .eta{font-family:'Bebas Neue';font-size:54px;line-height:.9;margin-top:8px}
+  .ohead .r .eta em{font-family:'DM Serif Display';font-style:italic;color:var(--rust)}
+
+  /* timeline */
+  .timeline{padding:70px 40px;display:grid;grid-template-columns:1fr;gap:0;max-width:980px;margin:0 auto}
+  .tl-prog{display:flex;align-items:center;margin-bottom:60px}
+  .tl-node{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;text-align:center}
+  .tl-node .dot{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:var(--paper);z-index:2;transition:all .4s}
+  .tl-node.done .dot{background:var(--rust);border-color:var(--rust)}
+  .tl-node.active .dot{border-color:var(--rust);box-shadow:0 0 0 6px rgba(201,76,26,.15)}
+  .tl-node.active .dot::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:var(--rust);top:6px;left:50%;transform:translateX(-50%)}
+  .tl-line{position:absolute;top:9px;left:50%;width:100%;height:2px;background:var(--line);z-index:1}
+  .tl-line i{display:block;height:100%;width:0;background:var(--rust);transition:width .8s cubic-bezier(.16,1,.3,1)}
+  .tl-node:last-child .tl-line{display:none}
+  .tl-node .lbl{margin-top:16px;font:10px/1.3 'Space Mono';letter-spacing:.18em;text-transform:uppercase;color:var(--mute);max-width:120px}
+  .tl-node.done .lbl,.tl-node.active .lbl{color:var(--ink)}
+  .tl-node .when{margin-top:6px;font:10px/1 'Space Mono';color:var(--mute)}
+
+  /* detailed steps */
+  .steps-list{border-top:1px solid var(--line)}
+  .sitem{display:grid;grid-template-columns:160px 1fr auto;gap:24px;padding:24px 0;border-bottom:1px solid var(--line);align-items:center}
+  .sitem .st{font:11px/1.4 'Space Mono';letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+  .sitem.done .st{color:var(--ink)}
+  .sitem .desc{font:13px/1.5 'Space Mono';color:#3a3833}
+  .sitem .desc b{color:var(--ink)}
+  .sitem .mark{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:13px;color:var(--mute)}
+  .sitem.done .mark{background:var(--rust);border-color:var(--rust);color:var(--paper)}
+  .sitem.future{opacity:.45}
+
+  /* items + map */
+  .tcols{display:grid;grid-template-columns:1.2fr 1fr;gap:0;border-top:1px solid var(--line)}
+  .titems{padding:40px;border-right:1px solid var(--line)}
+  .titems h3{font-family:'Bebas Neue';font-size:40px;line-height:.9;margin-bottom:24px}
+  .tline{display:grid;grid-template-columns:64px 1fr auto;gap:18px;padding:18px 0;border-bottom:1px solid var(--line);align-items:center}
+  .tline .th{aspect-ratio:3/4;width:64px;border-radius:2px;position:relative;overflow:hidden}
+  .tline .th .gm{position:absolute;inset:0;display:grid;place-items:center} .tline .th .gm svg{width:74%}
+  .tline .mn{font:12px/1.5 'Space Mono'} .tline .mn small{display:block;color:var(--mute)}
+  .tline .mp{font-family:'Bebas Neue';font-size:22px}
+  .tmap{padding:40px;background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
+  .tmap h3{font-family:'Bebas Neue';font-size:40px;margin-bottom:8px}
+  .tmap .route{position:relative;height:280px;margin-top:30px;border:1px solid var(--line-d)}
+  .tmap .route .grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(244,241,236,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(244,241,236,.06) 1px,transparent 1px);background-size:32px 32px}
+  .tmap .route svg{position:absolute;inset:0;width:100%;height:100%}
+  .tmap .city{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px;font:9px/1 'Space Mono';letter-spacing:.16em;text-transform:uppercase;color:rgba(244,241,236,.8);transform:translate(-50%,-50%)}
+  .tmap .city .pin{width:12px;height:12px;border-radius:50%;background:rgba(244,241,236,.5)}
+  .tmap .city.origin{left:20%;top:70%} .tmap .city.origin .pin{background:var(--paper)}
+  .tmap .city.dest{left:80%;top:28%} .tmap .city.dest .pin{background:var(--rust);box-shadow:0 0 0 5px rgba(201,76,26,.25)}
+  .tmap .parcel{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--rust);transform:translate(-50%,-50%);display:grid;place-items:center;z-index:3;transition:left 1s cubic-bezier(.16,1,.3,1),top 1s cubic-bezier(.16,1,.3,1)}
+  .tmap .parcel::after{content:"";position:absolute;inset:-6px;border:1px solid var(--rust);border-radius:50%;animation:ping 2s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.8);opacity:.8}100%{transform:scale(1.8);opacity:0}}
+  .tmap .note{margin-top:24px;font:11px/1.7 'Space Mono';color:rgba(244,241,236,.7)}
+  .tmap .note b{color:var(--paper)}
+
+  .tactions{padding:40px;display:flex;gap:14px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center}
+  .tactions .demo{margin-left:auto;display:flex;gap:8px;align-items:center;font:10px/1 'Space Mono';letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+  .tactions .demo button{padding:9px 14px;border:1px solid var(--line);transition:all .25s}
+  .tactions .demo button:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  @media (max-width:860px){
+    .lookup{padding:6px 16px 40px}
+    .lookup .row{flex-direction:column;align-items:stretch;padding:14px}
+    .lookup .row .btn{justify-content:center}
+    .ohead{grid-template-columns:1fr;padding:24px 16px;gap:18px}
+    .ohead .l h2{font-size:60px}
+    .ohead .r{text-align:left}
+    .ohead .l .meta{flex-wrap:wrap;gap:14px 24px}
+    .timeline{padding:44px 16px}
+    .tl-prog{margin-bottom:40px}
+    .tl-node .lbl{font-size:8px;letter-spacing:.1em;max-width:60px}
+    .tl-node .dot{width:16px;height:16px}
+    .sitem{grid-template-columns:1fr auto;gap:6px 16px;padding:20px 0}
+    .sitem .desc{grid-column:1/-1;order:3}
+    .tcols{grid-template-columns:1fr}
+    .titems{padding:30px 16px;border-right:0;border-bottom:1px solid var(--line)}
+    .tmap{padding:30px 16px}
+    .tactions{padding:30px 16px;flex-direction:column;align-items:stretch}
+    .tactions .btn{justify-content:center}
+    .tactions .demo{margin-left:0;justify-content:space-between}
+  }
+</style>
+</head>
+<body data-page="track">
+<canvas id="cosmos"></canvas>
+<div class="cur-ring" id="curRing"></div><div class="cur-dot" id="curDot"></div>
+
+<div class="wrap">
+<nav class="nav" id="nav">
+  <div class="brand"><a href="VOID.html"><span>grumb</span></a><small>EST. MMXXII / TOKYO ↔ PARIS</small></div>
+  <ul>
+    <li><a href="Collections.html">Collections</a></li>
+    <li><a href="Account.html">Account</a></li>
+    <li><a href="Track.html" class="on">Track</a></li>
+    <li><a href="Bag.html">Bag</a></li>
+  </ul>
+  <div class="right">
+    <span class="ccy"><i class="dot"></i> JPY ¥ / EN</span>
+    <button class="cart" data-hot onclick="location.href='Bag.html'">Bag<span class="n" data-cartcount>00</span></button>
+  </div>
+</nav>
+
+<div class="crumbs">
+  <span class="b"><a href="VOID.html">grumb</a> /&nbsp; <a href="Account.html">Account</a> /&nbsp; <span style="color:var(--ink)">Track Order</span></span>
+  <span>SUPPORT · TOKYO 13:42 / PARIS 06:42</span>
+</div>
+
+<header class="ptitle">
+  <h1>TRACK <em>order.</em></h1>
+  <div class="sub"><span>Follow your pieces from atelier to door</span><span>grumb COURIER</span></div>
+</header>
+
+<!-- LOOKUP -->
+<div class="lookup" id="lookup">
+  <div class="row">
+    <input id="oid" placeholder="Order number — e.g. VD-204815">
+    <button class="btn primary" id="lookupBtn" data-hot>Track <i class="arr"></i></button>
+  </div>
+  <div class="hint" id="lookupHint">Enter the order number from your confirmation email. <a id="useLast" data-hot style="cursor:none">Use my last order ↗</a></div>
+</div>
+
+<!-- TRACK BODY -->
+<div class="trackBody" id="trackBody">
+  <div class="ohead" data-dark>
+    <div class="l">
+      <span class="eyebrow dark">— order</span>
+      <h2 id="ohId">VD—000000</h2>
+      <div class="meta"><span>Placed <b id="ohDate">—</b></span><span>Ship to <b id="ohName">—</b></span><span><b id="ohQty">0</b> pieces</span><span>Total <b id="ohTotal">¥0</b></span></div>
+    </div>
+    <div class="r"><div class="eta-lbl">Estimated arrival</div><div class="eta" id="ohEta">— <em>—</em></div></div>
+  </div>
+
+  <section class="timeline">
+    <div class="tl-prog" id="tlProg"></div>
+    <div class="steps-list" id="stepsList"></div>
+  </section>
+
+  <section class="tcols">
+    <div class="titems">
+      <h3>In this shipment</h3>
+      <div id="tItems"></div>
+    </div>
+    <div class="tmap" data-dark>
+      <h3>On its way</h3>
+      <div class="eyebrow dark">Kyoto Atelier → <span id="mapDest">your address</span></div>
+      <div class="route">
+        <div class="grid-bg"></div>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path id="routePath" d="M20 70 Q50 20 80 28" fill="none" stroke="rgba(201,76,26,.5)" stroke-width="0.6" stroke-dasharray="2 2"/></svg>
+        <div class="city origin"><span class="pin"></span>Kyoto</div>
+        <div class="city dest"><span class="pin"></span><span id="destCity">Tokyo</span></div>
+        <div class="parcel" id="parcel"></div>
+      </div>
+      <div class="note" id="mapNote">Your parcel is moving through the grumb courier network.</div>
+    </div>
+  </section>
+
+  <div class="tactions">
+    <a class="btn" data-hot href="Account.html">View all orders</a>
+    <a class="btn" data-hot href="VOID.html#about">Contact support</a>
+    <a class="btn" data-hot href="VOID.html#collections">Shop again</a>
+    <div class="demo"><span>Demo:</span><button id="advance" data-hot>Advance status →</button><button id="resetStatus" data-hot>Reset</button></div>
+  </div>
+</div>
+
+<section class="marquee" aria-hidden="true"><div class="track" id="mTrack"></div></section>
+
+<footer class="ft">
+  <div class="ft-top">
+    <div class="ft-brand"><a href="VOID.html"><div class="display">grumb</div></a><div class="eyebrow" style="margin-top:14px">— infinite style. eternal chic.</div></div>
+    <div class="ft-cols">
+      <div><b>Shop</b><a href="Product.html?p=parka">Outerwear</a><a href="Product.html?p=suit">Tailoring</a><a href="Collections.html">Archive</a></div>
+      <div><b>Account</b><a href="Account.html">Overview</a><a href="Track.html">Track order</a><a href="Bag.html">Bag</a></div>
+      <div><b>Service</b><a href="VOID.html#about">Shipping</a><a href="VOID.html#about">Returns</a><a href="VOID.html#stockists">Contact</a></div>
+      <div><b>Legal</b><a href="VOID.html#about">Privacy</a><a href="VOID.html#about">Terms</a></div>
+    </div>
+  </div>
+  <div class="ft-bot"><span>© grumb 2024 — All wrongs reserved.</span><span>Tokyo ↔ Paris</span><span>Site by grumb Studio</span></div>
+</footer>
+</div>
+
+<div class="toast" id="toast"><div class="tx"><b id="toastNm"></b><small id="toastMeta"></small></div></div>
+
+<script src="shop-common.js"></script>
+<script>
+const G=window.VOID_G, BG=window.VOID_BG;
+const STAGES=[
+  {k:'Confirmed', d:'Order received and confirmed. Payment authorised.'},
+  {k:'In the atelier', d:'Your pieces are being picked, pressed, and quality-checked in Kyoto.'},
+  {k:'Shipped', d:'Handed to the grumb courier. Tracking is now live.'},
+  {k:'Out for delivery', d:'On the final leg — arriving today.'},
+  {k:'Delivered', d:'Delivered. Welcome to the register.'},
+];
+const toast=document.getElementById('toast');
+function showToast(n,m){document.getElementById('toastNm').textContent=n;document.getElementById('toastMeta').textContent=m||'';toast.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>toast.classList.remove('show'),2400);}
+
+let currentOrder=null;
+
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}catch(e){return '—'}}
+function etaFrom(iso,status){
+  const base=new Date(iso); const add=[5,4,3,1,0][status]||0;
+  const e=new Date(base.getTime()+add*86400000);
+  return {d:e.getDate(), m:e.toLocaleDateString('en-GB',{month:'short'})};
+}
+
+function lookup(id){
+  const orders=readOrders();
+  const o=orders.find(x=>x.id.toUpperCase()===id.toUpperCase());
+  const hint=document.getElementById('lookupHint');
+  if(!o){hint.className='hint bad';hint.innerHTML='No order found for “'+id+'”. Check the number, or <a href="VOID.html#collections" style="color:var(--rust)">place an order</a> to see live tracking.';return;}
+  currentOrder=o; renderOrder(o);
+  document.getElementById('trackBody').classList.add('show');
+  document.getElementById('lookup').style.display='none';
+  history.replaceState(null,'','Track.html?id='+o.id);
+}
+
+function renderOrder(o){
+  document.getElementById('ohId').textContent=o.id.replace('-','—');
+  document.getElementById('ohDate').textContent=fmtDate(o.date);
+  document.getElementById('ohName').textContent=o.name||'—';
+  document.getElementById('ohQty').textContent=o.items.reduce((a,b)=>a+b.qty,0);
+  document.getElementById('ohTotal').textContent=yen(o.totals.total);
+  const eta=etaFrom(o.date,o.status);
+  document.getElementById('ohEta').innerHTML=eta.d+' <em>'+eta.m+'</em>';
+  const destCity=(o.address||'').split(',').slice(-2,-1)[0]||'Tokyo';
+  document.getElementById('destCity').textContent=destCity.trim()||'Tokyo';
+  document.getElementById('mapDest').textContent=destCity.trim()||'your address';
+
+  // timeline nodes
+  document.getElementById('tlProg').innerHTML=STAGES.map((s,i)=>{
+    const cls=i<o.status?'done':i===o.status?'active':'';
+    const fill=i<o.status?'100%':'0%';
+    return `<div class="tl-node ${cls}"><div class="tl-line"><i style="width:${fill}"></i></div><div class="dot"></div><div class="lbl">${s.k}</div><div class="when">${i<=o.status?(i===o.status?'Now':'✓'):''}</div></div>`;
+  }).join('');
+
+  // detail steps (reverse: latest first)
+  document.getElementById('stepsList').innerHTML=STAGES.map((s,i)=>{
+    const state=i<o.status?'done':i===o.status?'done':'future';
+    const tick=i<=o.status?'✓':'';
+    return {i,html:`<div class="sitem ${i<=o.status?'done':'future'}"><div class="st">${s.k}${i===o.status?' · <span style="color:var(--rust)">current</span>':''}</div><div class="desc">${s.d}</div><div class="mark">${tick||(i+1)}</div></div>`};
+  }).reverse().map(x=>x.html).join('');
+
+  // items
+  document.getElementById('tItems').innerHTML=o.items.map(l=>{const bg=BG[l.slug]||['#1a1a1a','#fff'];
+    return `<div class="tline"><div class="th" style="background:${bg[0]}"><div class="gm" style="color:${bg[1]}">${G[l.slug]||''}</div></div><div class="mn">${l.nm}<small>Size ${l.size} · ${l.color} · ×${l.qty}</small></div><div class="mp">${yen(l.price*l.qty)}</div></div>`;}).join('');
+
+  // map parcel position along route
+  const t=[0.04,0.28,0.55,0.82,1][o.status];
+  // approximate quadratic path from (20,70) ctrl (50,20) to (80,28)
+  const x=(1-t)*(1-t)*20+2*(1-t)*t*50+t*t*80;
+  const y=(1-t)*(1-t)*70+2*(1-t)*t*20+t*t*28;
+  const parcel=document.getElementById('parcel');
+  parcel.style.left=x+'%'; parcel.style.top=y+'%';
+  document.getElementById('mapNote').innerHTML = o.status>=4 ? 'Delivered to <b>'+(o.name||'you')+'</b>. We hope it lasts a decade.'
+    : o.status===0 ? 'Order <b>confirmed</b>. Your pieces enter the atelier next.'
+    : o.status===1 ? 'Currently <b>in the Kyoto atelier</b> — pressed and checked by hand.'
+    : o.status===2 ? 'In transit with the <b>grumb courier</b> network.'
+    : 'Out for delivery — <b>arriving today</b>. Someone should be available to receive it.';
+}
+
+document.getElementById('lookupBtn').addEventListener('click',()=>{const v=document.getElementById('oid').value.trim();if(v)lookup(v);});
+document.getElementById('oid').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value.trim();if(v)lookup(v);}});
+document.getElementById('useLast').addEventListener('click',()=>{
+  const last=localStorage.getItem('void_last_order');
+  const orders=readOrders();
+  if(last){document.getElementById('oid').value=last;lookup(last);}
+  else if(orders.length){document.getElementById('oid').value=orders[0].id;lookup(orders[0].id);}
+  else{const h=document.getElementById('lookupHint');h.className='hint bad';h.innerHTML='No orders yet. <a href="VOID.html#collections" style="color:var(--rust)">Place one</a> to see live tracking.';}
+});
+
+/* demo controls */
+document.getElementById('advance').addEventListener('click',()=>{
+  if(!currentOrder)return;
+  const orders=readOrders();const o=orders.find(x=>x.id===currentOrder.id);if(!o)return;
+  o.status=Math.min(4,(o.status||0)+1); writeOrders(orders); currentOrder=o; renderOrder(o);
+  showToast(STAGES[o.status].k, 'Order '+o.id);
+});
+document.getElementById('resetStatus').addEventListener('click',()=>{
+  if(!currentOrder)return;const orders=readOrders();const o=orders.find(x=>x.id===currentOrder.id);if(!o)return;
+  o.status=0;writeOrders(orders);currentOrder=o;renderOrder(o);showToast('Status reset','Order '+o.id);
+});
+
+/* marquee */
+document.getElementById('mTrack').innerHTML=['grumb COURIER','KYOTO → DOOR','TRACKED','SS 2024','KEPT NOT WORN','grumb COURIER','KYOTO → DOOR','TRACKED','SS 2024','KEPT NOT WORN'].map(w=>`<span>${w}</span>`).join('');
+
+/* auto-open from ?id= or last order */
+const qid=new URLSearchParams(location.search).get('id');
+if(qid){document.getElementById('oid').value=qid;lookup(qid);}
+VOID.initChrome();
+</script>
+
+<script>/*__GRUMB_NINJA__*/(function grumbNinja(){
+  if (window.__grumbNinja) return; window.__grumbNinja = true;
+  var REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var THEMES = [
+    {k:'soke',   nm:'Sōke',   el:'Rust · default', rust:'#c8440e', rust2:'#e85a24', paper:'#f4f1ec', ink:'#0a0a0a'},
+    {k:'katon',  nm:'Katon',  el:'Fire',      rust:'#e0432a', rust2:'#ff6a3d', paper:'#f4efe9', ink:'#0c0908'},
+    {k:'suiton', nm:'Suiton', el:'Water',     rust:'#2f86a6', rust2:'#46a9c4', paper:'#edf0f1', ink:'#080c0e'},
+    {k:'futon',  nm:'Fūton',  el:'Wind',      rust:'#4f9e7a', rust2:'#6fc299', paper:'#eef1ed', ink:'#090c0a'},
+    {k:'raiton', nm:'Raiton', el:'Lightning', rust:'#c39a32', rust2:'#e8c25c', paper:'#f3efe5', ink:'#0c0b07'},
+    {k:'kage',   nm:'Kage',   el:'Shadow',    rust:'#7a6488', rust2:'#9a82ab', paper:'#eceaef', ink:'#0a0a0c'}
+  ];
+  function findT(k){ for(var i=0;i<THEMES.length;i++){ if(THEMES[i].k===k) return THEMES[i]; } return THEMES[0]; }
+
+  // compact ninja mascot markup (120-unit coordinate system, scaled by container)
+  function ninjaHTML(){
+    return '<div class="gn-stage"><div class="gn-inner">'+
+      '<div class="gn-tail left"></div><div class="gn-tail right"></div>'+
+      '<div class="gn-mask"></div><div class="gn-head"></div>'+
+      '<div class="gn-band"><div class="gn-eyes"><div class="gn-eye left"></div><div class="gn-eye right"></div></div></div>'+
+    '</div></div>';
+  }
+
+  function apply(k, animate){
+    var t = findT(k);
+    var r = document.documentElement.style;
+    r.setProperty('--rust', t.rust); r.setProperty('--rust2', t.rust2);
+    r.setProperty('--paper', t.paper); r.setProperty('--ink', t.ink);
+    try{ localStorage.setItem('grumb_theme', k); }catch(e){}
+    var opts = document.querySelectorAll('.gn-opt');
+    for (var i=0;i<opts.length;i++){ opts[i].classList.toggle('on', opts[i].getAttribute('data-k')===k); }
+    if (animate){ var st = document.querySelector('.gn-ninja .gn-inner'); if(st){ st.classList.remove('gn-poof'); void st.offsetWidth; st.classList.add('gn-poof'); var b=document.querySelector('.gn-ninja'); if(b) burstSmoke(b.querySelector('.gn-stage'), 12, 60, 56); } }
+  }
+
+  var saved = 'soke'; try{ saved = localStorage.getItem('grumb_theme') || 'soke'; }catch(e){}
+  apply(saved, false);
+
+  var css = document.createElement('style');
+  css.textContent = `
+    /* ===== ninja mascot (120-unit, scaled) ===== */
+    .gn-ninja{position:relative;display:inline-block;vertical-align:middle;width:46px;height:44px;margin-left:10px;background:none;border:0;padding:0;flex:0 0 auto}
+    .gn-ninja .gn-stage{position:absolute;top:50%;left:50%;width:120px;height:120px;transform:translate(-50%,-50%) scale(.34);transform-origin:center;overflow:visible}
+    .gn-inner{position:absolute;inset:0;transform-origin:center bottom;animation:gnFloat 3.2s ease-in-out infinite}
+    .gn-inner.gn-poof{animation:gnFloat 3.2s ease-in-out infinite, gnPoof .6s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes gnFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    @keyframes gnPoof{0%{transform:scale(.7)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+    .gn-head{position:absolute;top:14px;left:10px;width:100px;height:92px;background:var(--ink,#0a0a0a);border-radius:22px 22px 16px 16px;box-shadow:inset -6px -8px 0 rgba(0,0,0,.35)}
+    .gn-head::before{content:'';position:absolute;top:8px;left:14px;width:40px;height:10px;background:#1a1a18;border-radius:8px;opacity:.6}
+    .gn-band{position:absolute;top:46px;left:6px;width:108px;height:26px;background:var(--rust,#c8440e);box-shadow:inset 0 -6px 0 rgba(0,0,0,.18);z-index:3}
+    .gn-eyes{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:22px}
+    .gn-eye{width:22px;height:9px;background:var(--paper,#f4f1ec);border-radius:3px;transform:skewX(-8deg);transition:height .15s ease,transform .15s ease}
+    .gn-eye.right{transform:skewX(8deg)}
+    .gn-tail{position:absolute;top:50px;width:42px;height:20px;background:var(--rust,#c8440e);z-index:2}
+    .gn-tail.left{left:-30px;transform-origin:right center;clip-path:polygon(0 30%,100% 0,100% 100%,0 70%);animation:gnTailL 2s ease-in-out infinite}
+    .gn-tail.right{right:-30px;transform-origin:left center;clip-path:polygon(0 0,100% 30%,100% 70%,0 100%);animation:gnTailR 2.3s ease-in-out infinite}
+    @keyframes gnTailL{0%,100%{transform:rotate(-15deg)}50%{transform:rotate(-30deg) translateX(-3px)}}
+    @keyframes gnTailR{0%,100%{transform:rotate(15deg)}50%{transform:rotate(30deg) translateX(3px)}}
+    .gn-mask{position:absolute;top:72px;left:14px;width:92px;height:34px;background:var(--ink,#0a0a0a);border-radius:0 0 16px 16px;z-index:1;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3)}
+    .gn-eye{animation:gnBlink 4s steps(1) infinite}
+    @keyframes gnBlink{0%,52%,57%,100%{opacity:1}54%{opacity:.12}}
+    /* hover squint */
+    .gn-ninja:hover .gn-inner{animation-play-state:paused;transform:translateY(-3px)}
+    .gn-ninja:hover .gn-eye{height:4px}
+    .gn-ninja:hover .gn-eye.left{transform:skewX(-18deg)}
+    .gn-ninja:hover .gn-eye.right{transform:skewX(18deg)}
+    .gn-ninja:hover .gn-tail.left{animation:none;transform:rotate(-42deg)}
+    .gn-ninja:hover .gn-tail.right{animation:none;transform:rotate(42deg)}
+    .gn-reduce .gn-inner,.gn-reduce .gn-tail,.gn-reduce .gn-eye{animation:none!important}
+    .gn-smoke{position:absolute;border-radius:50%;background:#2a2a28;pointer-events:none;z-index:5}
+    /* ===== theme popover ===== */
+    .gn-pop{position:fixed;top:58px;left:14px;z-index:99990;width:256px;background:#0a0a0a;color:#f4f1ec;border-top:2px solid var(--rust);padding:16px 16px 10px;transform:translateY(-10px);opacity:0;pointer-events:none;transition:opacity .3s cubic-bezier(.16,1,.3,1),transform .3s cubic-bezier(.16,1,.3,1);box-shadow:0 30px 70px -24px rgba(0,0,0,.7)}
+    .gn-pop.open{opacity:1;transform:none;pointer-events:auto}
+    .gn-pop .gn-h{font:10px/1.4 'Space Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:#8a857c;margin-bottom:12px}
+    .gn-opt{display:flex;align-items:center;gap:13px;padding:9px 8px;background:none;border:0;color:#f4f1ec;text-align:left;width:100%;cursor:pointer;transition:background .2s}
+    .gn-opt:hover,.gn-opt.on{background:rgba(244,241,236,.06)}
+    .gn-chip{width:26px;height:18px;flex:0 0 auto;border-radius:4px;position:relative;display:flex;align-items:center;justify-content:center;gap:4px}
+    .gn-chip i{width:5px;height:3px;background:#f4f1ec;border-radius:1px;transform:skewX(-8deg)}
+    .gn-nm{font-family:'Bebas Neue',sans-serif;font-size:19px;line-height:1;letter-spacing:.04em;display:flex;flex-direction:column;gap:3px}
+    .gn-nm small{font:9px/1 'Space Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:#8a857c}
+    .gn-opt.on .gn-nm small{color:var(--rust)}
+    /* ===== intro ===== */
+    #gnIntro{position:fixed;inset:0;z-index:100000;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+    #gnIntro .gn-bigninja{position:relative;width:150px;height:150px;margin-bottom:24px;opacity:0;transform:scale(.6)}
+    #gnIntro.play .gn-bigninja{transition:opacity .5s,transform .55s cubic-bezier(.34,1.56,.64,1);opacity:1;transform:scale(1)}
+    #gnIntro .gn-bigninja .gn-stage{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1.18);transform-origin:center}
+    #gnIntro .gn-iword{display:flex;align-items:flex-end;overflow:hidden;padding:0 .08em .14em;font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(78px,13vw,168px);line-height:.9;letter-spacing:.03em;color:#f4f1ec}
+    #gnIntro .gn-iword span,#gnIntro .gn-iword b{display:inline-block;transform:translateY(120%)}
+    #gnIntro .gn-iword b{color:var(--rust);font-weight:400}
+    #gnIntro.play .gn-iword span,#gnIntro.play .gn-iword b{animation:gnRise .9s cubic-bezier(.16,1,.3,1) forwards}
+    #gnIntro.play .gn-iword span:nth-child(1){animation-delay:.55s}
+    #gnIntro.play .gn-iword span:nth-child(2){animation-delay:.62s}
+    #gnIntro.play .gn-iword span:nth-child(3){animation-delay:.69s}
+    #gnIntro.play .gn-iword span:nth-child(4){animation-delay:.76s}
+    #gnIntro.play .gn-iword span:nth-child(5){animation-delay:.83s}
+    #gnIntro.play .gn-iword b{animation-delay:.91s}
+    #gnIntro .gn-iline{width:0;height:1px;background:var(--rust);margin-top:24px}
+    #gnIntro.play .gn-iline{animation:gnLine .7s cubic-bezier(.16,1,.3,1) 1.05s forwards}
+    #gnIntro .gn-itag{margin-top:20px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:#8a857c;opacity:0}
+    #gnIntro.play .gn-itag{animation:gnFade .8s ease 1.2s forwards}
+    #gnIntro.out{clip-path:inset(0 0 100% 0);transition:clip-path .9s cubic-bezier(.76,0,.24,1)}
+    @keyframes gnRise{to{transform:translateY(0)}}
+    @keyframes gnLine{to{width:min(300px,62vw)}}
+    @keyframes gnFade{to{opacity:1}}
+  `;
+  document.head.appendChild(css);
+  if (REDUCE) document.documentElement.classList.add('gn-reduce');
+
+  function burstSmoke(container, count, ox, oy){
+    if(!container) return;
+    for(var i=0;i<count;i++){
+      var s=document.createElement('div'); s.className='gn-smoke';
+      var sz=6+Math.random()*10; s.style.width=sz+'px'; s.style.height=sz+'px';
+      s.style.left=ox+'px'; s.style.top=oy+'px'; s.style.opacity='.35';
+      container.appendChild(s);
+      (function(s){
+        var ang=Math.random()*Math.PI*2, sp=2+Math.random()*5, vx=Math.cos(ang)*sp, vy=Math.sin(ang)*sp, x=ox, y=oy, op=.35;
+        (function step(){ x+=vx; y+=vy; vx*=.92; vy*=.92; op-=.014; s.style.left=x+'px'; s.style.top=y+'px'; s.style.opacity=Math.max(0,op); if(op>0) requestAnimationFrame(step); else s.remove(); })();
+      })(s);
+    }
+  }
+
+  function buildMark(){
+    var brand=document.querySelector('.nav .brand'); if(!brand || brand.querySelector('.gn-ninja')) return;
+    var anchor=brand.querySelector('a')||brand.querySelector('span');
+    var btn=document.createElement('button');
+    btn.className='gn-ninja'; btn.setAttribute('data-hot',''); btn.setAttribute('aria-label','Choose element theme');
+    btn.innerHTML=ninjaHTML();
+    if(anchor && anchor.nextSibling) brand.insertBefore(btn, anchor.nextSibling); else brand.appendChild(btn);
+    btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); togglePop(); });
+  }
+
+  var pop=null;
+  function buildPop(){
+    pop=document.createElement('div'); pop.className='gn-pop';
+    var html='<div class="gn-h">Choose your element</div>';
+    for(var i=0;i<THEMES.length;i++){ var t=THEMES[i];
+      html+='<button class="gn-opt" data-hot data-k="'+t.k+'"><span class="gn-chip" style="background:'+t.rust+'"><i></i><i></i></span><span class="gn-nm">'+t.nm+'<small>'+t.el+'</small></span></button>';
+    }
+    pop.innerHTML=html; document.body.appendChild(pop);
+    pop.addEventListener('click', function(e){ var o=e.target.closest('.gn-opt'); if(!o) return; apply(o.getAttribute('data-k'), true); setTimeout(closePop,180); });
+    document.addEventListener('click', function(e){ if(pop.classList.contains('open') && !e.target.closest('.gn-pop') && !e.target.closest('.gn-ninja')) closePop(); });
+    apply(saved,false);
+  }
+  function togglePop(){ pop.classList.contains('open')?closePop():pop.classList.add('open'); }
+  function closePop(){ pop.classList.remove('open'); }
+
+  function intro(){
+    var played=false; try{ played=sessionStorage.getItem('grumb_ninja_intro')==='1'; }catch(e){}
+    
+    var ov=document.createElement('div'); ov.id='gnIntro';
+    ov.innerHTML=
+      '<div class="gn-iword"><span>g</span><span>r</span><span>u</span><span>m</span><span>b</span><b>.</b></div>'+
+      '<div class="gn-iline"></div><div class="gn-itag">the art of staying unseen</div>';
+    document.body.appendChild(ov); document.body.style.overflow='hidden';
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('play');  }); });
+    setTimeout(function(){ ov.classList.add('out'); setTimeout(function(){ ov.remove(); document.body.style.overflow=''; }, 920); }, 2450);
+    try{ sessionStorage.setItem('grumb_ninja_intro','1'); }catch(e){}
+  }
+
+  window.grumbBurst = burstSmoke;
+  function init(){ buildPop(); intro(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();</script>
+</body>
+</html>

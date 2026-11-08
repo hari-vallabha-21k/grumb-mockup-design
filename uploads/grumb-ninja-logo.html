@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRUMB — Ninja Logo Animation</title>
+<style>
+  :root{
+    --ink:#111110;
+    --rust:#c8440e;
+    --rust2:#e85a24;
+    --bone:#f0ece4;
+    --shadow:#1a1a18;
+    --white:#f4f1ec;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-family:'Arial Black',Arial,sans-serif;
+    overflow-x:hidden;
+    padding:40px 20px;
+    gap:48px;
+  }
+
+  /* ============ MAIN STAGE ============ */
+  .stage{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+    cursor:pointer;
+    user-select:none;
+    padding:40px;
+  }
+
+  /* ============ NINJA MASCOT ============ */
+  .ninja{
+    position:relative;
+    width:120px;
+    height:120px;
+    flex-shrink:0;
+    transform-origin:center;
+  }
+  .ninja-inner{
+    position:relative;
+    width:100%;
+    height:100%;
+    transform-origin:center bottom;
+    animation:float 3.2s ease-in-out infinite;
+  }
+  @keyframes float{
+    0%,100%{transform:translateY(0) rotate(0deg)}
+    50%{transform:translateY(-8px) rotate(0deg)}
+  }
+
+  /* hood / head */
+  .head{
+    position:absolute;
+    top:14px;
+    left:10px;
+    width:100px;
+    height:92px;
+    background:var(--ink);
+    border-radius:22px 22px 16px 16px;
+    box-shadow:inset -6px -8px 0 rgba(0,0,0,0.35);
+  }
+  /* hood top highlight */
+  .head::before{
+    content:'';
+    position:absolute;
+    top:8px;left:14px;
+    width:40px;height:10px;
+    background:var(--shadow);
+    border-radius:8px;
+    opacity:0.6;
+  }
+
+  /* headband */
+  .band{
+    position:absolute;
+    top:46px;
+    left:6px;
+    width:108px;
+    height:26px;
+    background:var(--rust);
+    box-shadow:inset 0 -6px 0 rgba(0,0,0,0.18);
+    z-index:3;
+    transform-origin:center;
+  }
+  /* eye holes container */
+  .eyes{
+    position:absolute;
+    top:0;left:0;right:0;bottom:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+  }
+  .eye{
+    width:22px;
+    height:9px;
+    background:var(--white);
+    border-radius:3px;
+    transform:skewX(-8deg);
+    transition:height 0.15s ease, transform 0.15s ease;
+  }
+  .eye.right{transform:skewX(8deg)}
+
+  /* headband tails */
+  .tail{
+    position:absolute;
+    top:50px;
+    width:42px;
+    height:20px;
+    background:var(--rust);
+    z-index:2;
+  }
+  .tail.left{
+    left:-30px;
+    transform-origin:right center;
+    clip-path:polygon(0 30%,100% 0,100% 100%,0 70%);
+    animation:tailLeft 2.0s ease-in-out infinite;
+  }
+  .tail.right{
+    right:-30px;
+    transform-origin:left center;
+    clip-path:polygon(0 0,100% 30%,100% 70%,0 100%);
+    animation:tailRight 2.3s ease-in-out infinite;
+  }
+  .tail.left::after{
+    content:'';position:absolute;top:4px;left:2px;width:24px;height:3px;
+    background:rgba(0,0,0,0.2);
+  }
+  .tail.right::after{
+    content:'';position:absolute;top:4px;right:2px;width:24px;height:3px;
+    background:rgba(0,0,0,0.2);
+  }
+  @keyframes tailLeft{
+    0%,100%{transform:rotate(-15deg) translateX(0)}
+    50%{transform:rotate(-30deg) translateX(-3px)}
+  }
+  @keyframes tailRight{
+    0%,100%{transform:rotate(15deg) translateX(0)}
+    50%{transform:rotate(30deg) translateX(3px)}
+  }
+
+  /* lower mask fabric */
+  .mask{
+    position:absolute;
+    top:72px;
+    left:14px;
+    width:92px;
+    height:34px;
+    background:var(--ink);
+    border-radius:0 0 16px 16px;
+    z-index:1;
+    box-shadow:inset 0 -4px 0 rgba(0,0,0,0.3);
+  }
+  .mask::before{
+    content:'';
+    position:absolute;
+    top:8px;left:50%;
+    transform:translateX(-50%);
+    width:60px;height:2px;
+    background:rgba(255,255,255,0.06);
+  }
+
+  /* ============ WORDMARK ============ */
+  .word{
+    display:flex;
+    font-size:72px;
+    font-weight:900;
+    letter-spacing:0.04em;
+    color:var(--white);
+    line-height:1;
+  }
+  .word .ltr{
+    display:inline-block;
+    transform-origin:center bottom;
+  }
+  .word .ltr.u{color:var(--rust)}
+  .word-underline{
+    position:absolute;
+    bottom:32px;
+    left:176px;
+    height:4px;
+    width:0;
+    background:var(--rust);
+    transition:width 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  /* ============ SMOKE ============ */
+  .smoke{
+    position:absolute;
+    border-radius:50%;
+    background:#2a2a28;
+    pointer-events:none;
+    z-index:5;
+  }
+
+  /* ============ HOVER STATE ============ */
+  .stage.angry .ninja-inner{animation-play-state:paused;transform:translateY(-4px) rotate(3deg)}
+  .stage.angry .eye{height:4px}
+  .stage.angry .eye.left{transform:skewX(-18deg)}
+  .stage.angry .eye.right{transform:skewX(18deg)}
+  .stage.angry .tail.left{animation:none;transform:rotate(-42deg)}
+  .stage.angry .tail.right{animation:none;transform:rotate(42deg)}
+  .stage.angry .word-underline{width:280px}
+
+  /* eye glow pulse */
+  .glow .eye{animation:eyeGlow 4s ease-in-out infinite}
+  @keyframes eyeGlow{
+    0%,72%{box-shadow:0 0 0 rgba(244,241,236,0)}
+    80%{box-shadow:0 0 14px rgba(244,241,236,0.9)}
+    86%{box-shadow:0 0 14px rgba(244,241,236,0.9)}
+    100%{box-shadow:0 0 0 rgba(244,241,236,0)}
+  }
+  /* blink */
+  .blink .eye{animation:eyeGlow 4s ease-in-out infinite, blink 4s steps(1) infinite}
+  @keyframes blink{
+    0%,52%,57%,100%{opacity:1}
+    54%{opacity:0.15}
+  }
+
+  /* ============ CONTROLS ============ */
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    max-width:640px;
+  }
+  .ctrl-btn{
+    background:transparent;
+    border:1px solid rgba(244,241,236,0.2);
+    color:var(--white);
+    font-family:Arial,sans-serif;
+    font-size:11px;
+    font-weight:bold;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    padding:11px 18px;
+    cursor:pointer;
+    transition:all 0.25s cubic-bezier(0.16,1,0.3,1);
+    position:relative;
+    overflow:hidden;
+  }
+  .ctrl-btn::after{
+    content:'';position:absolute;inset:0;background:var(--rust);
+    transform:translateX(-101%);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);z-index:-1;
+  }
+  .ctrl-btn:hover{border-color:var(--rust);color:var(--white)}
+  .ctrl-btn:hover::after{transform:translateX(0)}
+  .ctrl-btn:active{transform:scale(0.95)}
+
+  .hint{
+    color:rgba(244,241,236,0.4);
+    font-family:Arial,sans-serif;
+    font-size:11px;
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+  }
+
+  /* loading shuriken */
+  .shuriken{
+    position:absolute;
+    top:14px;left:10px;
+    width:100px;height:92px;
+    display:none;
+    z-index:6;
+  }
+  .shuriken svg{width:100%;height:100%}
+  .loading .shuriken{display:block;animation:spin 0.8s linear infinite}
+  .loading .head,.loading .band,.loading .tail,.loading .mask{opacity:0}
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+  /* size variants display */
+  .variants{
+    display:flex;
+    gap:32px;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:center;
+    padding-top:8px;
+    border-top:1px solid rgba(244,241,236,0.08);
+    width:100%;
+    max-width:640px;
+    padding-top:32px;
+  }
+  .vlabel{color:rgba(244,241,236,0.3);font-family:Arial;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;margin-top:8px;text-align:center}
+  .vitem{display:flex;flex-direction:column;align-items:center}
+</style>
+</head>
+<body>
+
+  <div class="hint">Hover the logo · or use the buttons below</div>
+
+  <div class="stage" id="stage">
+    <div class="ninja" id="ninja">
+      <div class="ninja-inner" id="ninjaInner">
+        <div class="shuriken">
+          <svg viewBox="0 0 100 100">
+            <polygon points="50,4 60,40 96,50 60,60 50,96 40,60 4,50 40,40" fill="#111110" stroke="#c8440e" stroke-width="2"/>
+            <circle cx="50" cy="50" r="8" fill="#c8440e"/>
+          </svg>
+        </div>
+        <div class="tail left"></div>
+        <div class="tail right"></div>
+        <div class="mask"></div>
+        <div class="head"></div>
+        <div class="band">
+          <div class="eyes">
+            <div class="eye left"></div>
+            <div class="eye right"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="word" id="word">
+      <span class="ltr">G</span><span class="ltr">R</span><span class="ltr u">U</span><span class="ltr">M</span><span class="ltr">B</span>
+    </div>
+    <div class="word-underline" id="underline"></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" onclick="playSmoke()">Smoke Reveal</button>
+    <button class="ctrl-btn" onclick="playSlash()">Slash Cut</button>
+    <button class="ctrl-btn" onclick="playLetterSlice()">Letter Slice</button>
+    <button class="ctrl-btn" onclick="playVanish()">Vanish</button>
+    <button class="ctrl-btn" onclick="playLoading()">Loading Spin</button>
+    <button class="ctrl-btn" onclick="toggleIdle()">Toggle Idle Glow</button>
+  </div>
+
+  <div class="variants">
+    <div class="vitem">
+      <div style="transform:scale(0.5);transform-origin:center" id="mini1"></div>
+      <div class="vlabel">Icon 60px</div>
+    </div>
+  </div>
+
+<script>
+const stage = document.getElementById('stage');
+const ninjaInner = document.getElementById('ninjaInner');
+const ninja = document.getElementById('ninja');
+const word = document.getElementById('word');
+const underline = document.getElementById('underline');
+const letters = word.querySelectorAll('.ltr');
+
+let idleOn = true;
+function applyIdle(){
+  const eyes = stage.querySelectorAll('.eye');
+  stage.classList.toggle('glow', false);
+  stage.classList.toggle('blink', idleOn);
+}
+applyIdle();
+
+/* ===== HOVER: ANGRY SQUINT ===== */
+stage.addEventListener('mouseenter', ()=> stage.classList.add('angry'));
+stage.addEventListener('mouseleave', ()=>{
+  stage.classList.remove('angry');
+  const eyes = stage.querySelectorAll('.eye');
+  eyes.forEach(e=>{
+    e.style.transition='opacity 0.1s';
+    e.style.opacity='0.15';
+    setTimeout(()=>{e.style.opacity='1';e.style.transition=''},120);
+  });
+});
+
+/* ===== SMOKE PARTICLES ===== */
+function burstSmoke(count, originX, originY){
+  for(let i=0;i<count;i++){
+    const s = document.createElement('div');
+    s.className='smoke';
+    const size = 6+Math.random()*10;
+    s.style.width=size+'px';
+    s.style.height=size+'px';
+    s.style.left=originX+'px';
+    s.style.top=originY+'px';
+    s.style.opacity='0.35';
+    ninja.appendChild(s);
+    const angle=Math.random()*Math.PI*2;
+    const speed=2+Math.random()*5;
+    let vx=Math.cos(angle)*speed;
+    let vy=Math.sin(angle)*speed;
+    let x=originX,y=originY,op=0.35;
+    function step(){
+      x+=vx;y+=vy;vx*=0.92;vy*=0.92;op-=0.012;
+      s.style.left=x+'px';s.style.top=y+'px';s.style.opacity=Math.max(0,op);
+      if(op>0){requestAnimationFrame(step)}else{s.remove()}
+    }
+    requestAnimationFrame(step);
+  }
+}
+
+/* ===== 01 SMOKE REVEAL ===== */
+function playSmoke(){
+  ninjaInner.style.animation='none';
+  ninjaInner.style.opacity='0';
+  ninjaInner.style.transform='scale(0.6)';
+  letters.forEach(l=>{l.style.opacity='0';l.style.transform='translateY(10px)'});
+  burstSmoke(22, 50, 50);
+  setTimeout(()=>{
+    ninjaInner.style.transition='opacity 0.5s, transform 0.5s cubic-bezier(0.34,1.56,0.64,1)';
+    ninjaInner.style.opacity='1';
+    ninjaInner.style.transform='scale(1)';
+  },200);
+  letters.forEach((l,i)=>{
+    setTimeout(()=>{
+      l.style.transition='opacity 0.4s, transform 0.4s cubic-bezier(0.16,1,0.3,1)';
+      l.style.opacity='1';l.style.transform='translateY(0)';
+    },600+i*80);
+  });
+  setTimeout(restoreIdle,1300);
+}
+
+/* ===== 02 SLASH CUT ===== */
+function playSlash(){
+  ninjaInner.style.animation='none';
+  ninjaInner.style.opacity='0';
+  ninjaInner.style.transform='translateY(-40px)';
+  letters.forEach(l=>{l.style.opacity='0';l.style.clipPath='inset(0 100% 0 0)'});
+  const slash=document.createElement('div');
+  slash.style.cssText='position:absolute;top:50%;left:50%;width:340px;height:3px;background:#c8440e;transform:translate(-50%,-50%) rotate(-45deg) scaleX(0);transform-origin:left;transition:transform 0.3s ease-out;z-index:10';
+  stage.appendChild(slash);
+  requestAnimationFrame(()=>slash.style.transform='translate(-50%,-50%) rotate(-45deg) scaleX(1)');
+  letters.forEach((l,i)=>{
+    setTimeout(()=>{
+      l.style.transition='opacity 0.2s, clip-path 0.3s ease-out';
+      l.style.opacity='1';l.style.clipPath='inset(0 0% 0 0)';
+    },100+i*45);
+  });
+  setTimeout(()=>{slash.style.transition='opacity 0.2s';slash.style.opacity='0';setTimeout(()=>slash.remove(),250)},350);
+  setTimeout(()=>{
+    ninjaInner.style.transition='opacity 0.4s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+    ninjaInner.style.opacity='1';ninjaInner.style.transform='translateY(0)';
+  },400);
+  setTimeout(restoreIdle,1100);
+}
+
+/* ===== 06 LETTER SLICE ===== */
+function playLetterSlice(){
+  ninjaInner.style.animation='none';
+  ninjaInner.style.opacity='0';
+  ninjaInner.style.transform='scale(0.5)';
+  const dirs=[[-60,-40],[60,0],[0,40],[0,-40],[-60,0]];
+  letters.forEach((l,i)=>{
+    l.style.transition='none';
+    l.style.opacity='0';
+    l.style.clipPath='inset(0 0 0 0)';
+    l.style.transform=`translate(${dirs[i][0]}px,${dirs[i][1]}px)`;
+    setTimeout(()=>{
+      l.style.transition='opacity 0.4s, transform 0.4s cubic-bezier(0.16,1,0.3,1)';
+      l.style.opacity='1';l.style.transform='translate(0,0)';
+    },i*60);
+  });
+  setTimeout(()=>{
+    const flash=document.createElement('div');
+    flash.style.cssText='position:absolute;top:50%;left:50px;width:120px;height:120px;background:#f4f1ec;border-radius:50%;transform:translate(-50%,-50%);opacity:0;z-index:9;pointer-events:none';
+    ninja.appendChild(flash);
+    flash.style.transition='opacity 0.1s';
+    requestAnimationFrame(()=>{flash.style.opacity='0.8';setTimeout(()=>{flash.style.opacity='0';setTimeout(()=>flash.remove(),120)},100)});
+    ninjaInner.style.transition='opacity 0.3s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1)';
+    ninjaInner.style.opacity='1';ninjaInner.style.transform='scale(1)';
+  },500);
+  setTimeout(restoreIdle,1100);
+}
+
+/* ===== 05 VANISH ===== */
+function playVanish(){
+  ninjaInner.style.animation='none';
+  ninjaInner.style.transition='transform 0.1s';
+  ninjaInner.style.transform='scale(0.8)';
+  burstSmoke(10,50,50);
+  setTimeout(()=>{
+    ninjaInner.style.transition='opacity 0.25s, transform 0.25s';
+    ninjaInner.style.opacity='0';
+    ninjaInner.style.transform='scale(0.7)';
+  },100);
+  setTimeout(()=>{
+    burstSmoke(10,50,50);
+    ninjaInner.style.transition='opacity 0.25s, transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
+    ninjaInner.style.opacity='1';
+    ninjaInner.style.transform='scale(1.05)';
+    setTimeout(()=>ninjaInner.style.transform='scale(1)',250);
+  },900);
+  setTimeout(restoreIdle,1500);
+}
+
+/* ===== 08 LOADING SPIN ===== */
+let loadingTimer;
+function playLoading(){
+  ninjaInner.style.animation='none';
+  ninjaInner.style.opacity='1';
+  ninjaInner.style.transform='scale(1)';
+  stage.classList.add('loading');
+  clearTimeout(loadingTimer);
+  loadingTimer=setTimeout(()=>{
+    stage.classList.remove('loading');
+    const parts=stage.querySelectorAll('.head,.band,.tail,.mask');
+    parts.forEach(p=>{p.style.transition='opacity 0.4s';p.style.opacity='1'});
+    restoreIdle();
+  },2400);
+}
+
+/* ===== IDLE RESTORE ===== */
+function restoreIdle(){
+  ninjaInner.style.transition='';
+  ninjaInner.style.animation='float 3.2s ease-in-out infinite';
+  ninjaInner.style.opacity='1';
+  ninjaInner.style.transform='';
+  letters.forEach(l=>{l.style.transition='';l.style.opacity='1';l.style.transform='';l.style.clipPath=''});
+  applyIdle();
+}
+
+function toggleIdle(){
+  idleOn=!idleOn;
+  applyIdle();
+}
+
+/* ===== build mini icon clone ===== */
+const mini=document.getElementById('mini1');
+mini.innerHTML=ninja.outerHTML;
+mini.querySelector('.shuriken').remove();
+
+/* play smoke reveal on load */
+window.addEventListener('load',()=>setTimeout(playSmoke,300));
+</script>
+</body>
+</html>

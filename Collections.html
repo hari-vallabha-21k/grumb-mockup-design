@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>grumb — Collections</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f1ec; --ink:#0a0a0a; --bone:#e8e4db;
+    --rust:#c94c1a; --rust2:#e85d2a; --mute:#8a857c;
+    --line:rgba(10,10,10,.14); --line-d:rgba(244,241,236,.14);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Space Mono',ui-monospace,Menlo,monospace; font-size:13px; line-height:1.55;
+    background:var(--paper); color:var(--ink); overflow-x:hidden; cursor:none;
+  }
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:none}
+  ::selection{background:var(--rust);color:var(--paper)}
+
+  #cosmos{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:.35}
+  .cur-dot,.cur-ring{position:fixed;left:0;top:0;pointer-events:none;z-index:9999;border-radius:999px;transform:translate(-50%,-50%)}
+  .cur-dot{width:12px;height:12px;background:var(--rust)}
+  .cur-ring{width:40px;height:40px;border:1px solid var(--ink);transition:width .25s,height .25s,border-color .2s,background .2s}
+  .cur-ring.is-dark{border-color:var(--paper)}
+  .cur-ring.is-hot{width:64px;height:64px;background:rgba(201,76,26,.08);border-color:var(--rust)}
+
+  .wrap{position:relative;z-index:1}
+  .eyebrow{font:11px/1 'Space Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--mute)}
+  .eyebrow.dark{color:#9c968a}
+  .display{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;letter-spacing:.005em;line-height:.86}
+
+  .reveal{opacity:0;transform:translateY(40px);transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1)}
+  .reveal.in{opacity:1;transform:translateY(0)}
+  .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
+
+  /* NAV */
+  .nav{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+    padding:14px 28px;background:rgba(244,241,236,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    transition:box-shadow .35s,border-color .35s;border-bottom:1px solid transparent;
+  }
+  .nav.scrolled{box-shadow:0 12px 40px -22px rgba(10,10,10,.35);border-bottom-color:var(--line)}
+  .nav .brand{display:flex;align-items:baseline;gap:12px;font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:.04em}
+  .nav .brand small{font:10px/1 'Space Mono',monospace;letter-spacing:.22em;color:var(--mute);padding-left:14px;border-left:1px solid var(--line);text-transform:uppercase}
+  .nav ul{display:flex;gap:38px;list-style:none;padding:0;margin:0;justify-self:center;font-size:11px;letter-spacing:.22em;text-transform:uppercase}
+  .nav ul a{position:relative;padding:6px 0;display:inline-block}
+  .nav ul a::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:0;background:var(--ink);transition:width .4s cubic-bezier(.16,1,.3,1)}
+  .nav ul a:hover::after,.nav ul a.on::after{width:100%}
+  .nav ul a.on{color:var(--rust)}
+  .nav ul a.on::after{background:var(--rust)}
+  .nav .right{display:flex;align-items:center;gap:18px;justify-self:end;font-size:11px;letter-spacing:.22em;text-transform:uppercase}
+  .nav .right .ccy{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:999px}
+  .nav .right .ccy .dot{width:6px;height:6px;border-radius:99px;background:var(--rust)}
+  .cart{position:relative;padding:10px 18px;border:1px solid var(--ink);border-radius:999px;overflow:hidden;isolation:isolate}
+  .cart::before{content:"";position:absolute;inset:0;background:var(--ink);transform:translateX(-101%);transition:transform .5s cubic-bezier(.16,1,.3,1);z-index:-1}
+  .cart:hover{color:var(--paper)} .cart:hover::before{transform:translateX(0)}
+  .cart .n{margin-left:10px;padding-left:10px;border-left:1px solid currentColor;opacity:.85}
+
+  .btn{position:relative;padding:16px 26px;border:1px solid var(--ink);border-radius:999px;font:11px/1 'Space Mono',monospace;letter-spacing:.22em;text-transform:uppercase;overflow:hidden;isolation:isolate;display:inline-flex;align-items:center;gap:14px;color:var(--ink);will-change:transform}
+  .btn::before{content:"";position:absolute;inset:0;background:var(--ink);transform:translateX(-101%);transition:transform .55s cubic-bezier(.65,0,.35,1);z-index:-1}
+  .btn:hover{color:var(--paper)} .btn:hover::before{transform:translateX(0)}
+  .btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .btn.primary::before{background:var(--rust)}
+  .btn.dark{border-color:var(--paper);color:var(--paper)}
+  .btn.dark::before{background:var(--paper)} .btn.dark:hover{color:var(--ink)}
+  .btn .arr{width:22px;height:1px;background:currentColor;position:relative}
+  .btn .arr::after{content:"";position:absolute;right:0;top:-3px;width:7px;height:7px;border-top:1px solid currentColor;border-right:1px solid currentColor;transform:rotate(45deg)}
+
+  /* ─── PAGE HEAD ─── */
+  .crumbs{padding:90px 40px 0;display:flex;justify-content:space-between;font:11px/1 'Space Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--mute)}
+  .crumbs a:hover{color:var(--rust)}
+  .pageHead{padding:40px 40px 80px;position:relative}
+  .pageHead h1{margin:0 0 0 -8px;font-family:'Bebas Neue',sans-serif;font-size:280px;line-height:.84;letter-spacing:0}
+  .pageHead h1 .lm{display:block;overflow:hidden}
+  .pageHead h1 .lm > span{display:inline-block;transform:translateY(110%);transition:transform 1.1s cubic-bezier(.16,1,.3,1)}
+  .pageHead h1.ready .lm:nth-child(1) > span{transform:translateY(0);transition-delay:.1s}
+  .pageHead h1.ready .lm:nth-child(2) > span{transform:translateY(0);transition-delay:.22s}
+  .pageHead h1 .ital{font-family:'DM Serif Display',serif;font-style:italic;color:var(--rust);font-size:.82em;letter-spacing:-.01em;padding-left:.06em}
+  .pageHead .meta{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid var(--line);padding-top:24px;margin-top:48px;gap:40px}
+  .pageHead .meta .l{display:flex;gap:60px;align-items:flex-end}
+  .pageHead .meta .l .k{display:flex;flex-direction:column;gap:8px;min-width:120px}
+  .pageHead .meta .l .k .n{font-family:'Bebas Neue';font-size:54px;line-height:.9}
+  .pageHead .meta .l .k .n em{color:var(--rust);font-family:'DM Serif Display';font-style:italic}
+  .pageHead .meta .l .k .lbl{font:10px/1.3 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:var(--mute)}
+  .pageHead .meta p{max-width:380px;font-size:14px;line-height:1.65;color:#3a3833}
+  .pageHead .meta p em{color:var(--rust);font-style:italic;font-family:'DM Serif Display',serif}
+
+  /* YEAR RAIL */
+  .yrail{display:flex;gap:32px;padding:24px 40px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;font-family:'Bebas Neue',sans-serif;font-size:58px;line-height:1;letter-spacing:.005em}
+  .yrail a{position:relative;padding:0 12px;transition:color .25s}
+  .yrail a:hover{color:var(--rust)}
+  .yrail a.on{color:var(--rust)}
+  .yrail a.on::after{content:"";position:absolute;left:12px;right:12px;top:6px;height:2px;background:var(--rust)}
+  .yrail span.div{color:var(--mute);font-family:'DM Serif Display',serif;font-style:italic;font-size:36px;align-self:center}
+
+  /* ─── FEATURED SEASON ─── */
+  .featured{display:grid;grid-template-columns:1.1fr 1fr;min-height:90vh;background:var(--ink);color:var(--paper);position:relative}
+  .featured .left{padding:80px 56px;display:flex;flex-direction:column;justify-content:space-between;gap:40px;position:relative;overflow:hidden}
+  .featured .left .top{display:flex;justify-content:space-between;font:11px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:#9c968a}
+  .featured .left h2{margin:24px 0 0;font-family:'Bebas Neue',sans-serif;font-size:200px;line-height:.86}
+  .featured .left h2 em{font-family:'DM Serif Display',serif;font-style:italic;color:var(--rust);font-size:.74em;padding-left:.06em}
+  .featured .left .sub{margin-top:32px;font-family:'DM Serif Display',serif;font-style:italic;font-size:36px;line-height:1.15;max-width:520px;color:rgba(244,241,236,.92)}
+  .featured .left p.lede{max-width:440px;color:rgba(244,241,236,.7);line-height:1.85;font-size:13px;margin-top:18px}
+  .featured .left .specs{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;border-top:1px solid var(--line-d);padding-top:24px;margin-top:auto}
+  .featured .left .specs .k .n{font-family:'Bebas Neue';font-size:44px;line-height:1}
+  .featured .left .specs .k .n em{color:var(--rust);font-family:'DM Serif Display';font-style:italic}
+  .featured .left .specs .k .lbl{font:10px/1.3 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:rgba(244,241,236,.55);margin-top:8px}
+  .featured .left .acts{display:flex;gap:14px;margin-top:32px}
+  .featured .right{position:relative;overflow:hidden;background:#0a0a0a}
+  .featured .right .ph{position:absolute;inset:0;background:
+    repeating-linear-gradient(135deg,rgba(244,241,236,.04) 0 14px,transparent 14px 28px),
+    radial-gradient(120% 80% at 70% 20%,rgba(232,93,42,.18),transparent 55%),
+    linear-gradient(180deg,#1a1a1a 0%,#070707 100%);
+  }
+  .featured .right .garmentBig{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);display:grid;place-items:center;color:rgba(244,241,236,.92);will-change:transform;transition:transform .6s cubic-bezier(.16,1,.3,1)}
+  .featured .right .garmentBig svg{width:64%;max-width:520px;filter:drop-shadow(0 36px 60px rgba(0,0,0,.6))}
+  .featured .right:hover .garmentBig{transform:translateY(calc(-50% - 8px))}
+  .featured .right .cnr{position:absolute;width:24px;height:24px;border:1px solid var(--paper);opacity:.7}
+  .featured .right .cnr.tl{top:18px;left:18px;border-right:0;border-bottom:0}
+  .featured .right .cnr.br{bottom:18px;right:18px;border-left:0;border-top:0}
+  .featured .right .stamp{position:absolute;left:18px;top:50%;transform:translateY(-50%) rotate(-90deg);transform-origin:left center;color:rgba(244,241,236,.55);font:10px/1 'Space Mono';letter-spacing:.5em;text-transform:uppercase;white-space:nowrap}
+  .featured .right .tagTop{position:absolute;top:24px;right:24px;color:var(--paper);font:10px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .featured .right .tagTop b{font:120px/1 'Bebas Neue',sans-serif;font-weight:400;letter-spacing:0;color:var(--paper)}
+  .featured .right .scroll-marker{position:absolute;left:24px;bottom:24px;font:10px/1 'Space Mono';letter-spacing:.32em;text-transform:uppercase;color:rgba(244,241,236,.6)}
+  .featured .right .scroll-marker i{display:inline-block;width:24px;height:1px;background:var(--rust);margin-right:10px;vertical-align:middle;animation:swipe2 2.6s cubic-bezier(.65,0,.35,1) infinite}
+  @keyframes swipe2{0%{transform:scaleX(0);transform-origin:left}50%{transform:scaleX(1);transform-origin:left}51%{transform:scaleX(1);transform-origin:right}100%{transform:scaleX(0);transform-origin:right}}
+
+  /* ─── SEASON LOOK STRIP (horizontal scroll-snap rail) ─── */
+  .lookrail{padding:0;background:var(--ink);color:var(--paper);position:relative;border-top:1px solid var(--line-d)}
+  .lookrail .head{display:flex;justify-content:space-between;align-items:flex-end;padding:48px 56px 28px}
+  .lookrail .head h3{margin:0;font-family:'Bebas Neue',sans-serif;font-size:64px;line-height:.9}
+  .lookrail .head h3 span{display:block;font:10px/1.4 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:#7a756c;margin-bottom:12px}
+  .lookrail .head .ctl{display:flex;gap:10px}
+  .lookrail .head .ctl button{width:44px;height:44px;border:1px solid rgba(244,241,236,.25);border-radius:99px;display:inline-flex;align-items:center;justify-content:center;color:var(--paper);transition:background .25s,color .25s,border-color .25s;will-change:transform}
+  .lookrail .head .ctl button:hover{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+  .lookrail .scroller{display:flex;gap:18px;padding:0 56px 56px;overflow-x:auto;scroll-behavior:smooth;scroll-snap-type:x mandatory}
+  .lookrail .scroller::-webkit-scrollbar{display:none}
+  .look{flex:0 0 320px;aspect-ratio:3/4;position:relative;overflow:hidden;background:#191919;scroll-snap-align:start;color:rgba(244,241,236,.88);transition:transform .5s cubic-bezier(.16,1,.3,1)}
+  .look:hover{transform:translateY(-6px)}
+  .look .bg{position:absolute;inset:0;transition:transform .8s cubic-bezier(.16,1,.3,1)}
+  .look:hover .bg{transform:scale(1.05)}
+  .look .bg::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.04) 0 12px,transparent 12px 24px);mix-blend-mode:overlay}
+  .look .garment{position:absolute;inset:0;display:grid;place-items:center;z-index:1;pointer-events:none;color:inherit}
+  .look .garment svg{width:62%;max-width:240px;filter:drop-shadow(0 18px 28px rgba(0,0,0,.45))}
+  .look .num{position:absolute;top:14px;left:14px;font:10px/1 'Space Mono';letter-spacing:.22em;color:rgba(244,241,236,.7);text-transform:uppercase}
+  .look .ttl{position:absolute;left:14px;right:14px;bottom:14px;z-index:2;display:flex;justify-content:space-between;align-items:flex-end;color:var(--paper)}
+  .look .ttl .nm{font:'Bebas Neue';font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1}
+  .look .ttl .nm small{display:block;font:10px/1 'Space Mono';letter-spacing:.22em;color:#cfc9bd;margin-bottom:4px;text-transform:uppercase}
+  .look .ttl .pr{font:11px/1 'Space Mono';letter-spacing:.06em;text-align:right}
+  .look.b1{background:linear-gradient(170deg,#3a3833,#070605)}
+  .look.b2{background:linear-gradient(165deg,#9b8b6f,#2a2418)}
+  .look.b3{background:linear-gradient(180deg,#283833,#070b09)}
+  .look.b4{background:linear-gradient(180deg,#ece6d6,#a89e85);color:rgba(34,34,34,.85)}
+  .look.b4 .num,.look.b4 .ttl,.look.b4 .ttl .nm small,.look.b4 .ttl .pr{color:rgba(34,34,34,.85)}
+  .look.b5{background:linear-gradient(180deg,#1c2436,#06080f)}
+  .look.b6{background:linear-gradient(160deg,#c9572a,#371609)}
+  .look.b7{background:linear-gradient(170deg,#4a4138,#1c1810)}
+  .look.b8{background:linear-gradient(180deg,#dad3c0,#7e776a);color:rgba(34,34,34,.85)}
+  .look.b8 .num,.look.b8 .ttl,.look.b8 .ttl .nm small,.look.b8 .ttl .pr{color:rgba(34,34,34,.85)}
+  .lookrail .progress{position:absolute;left:56px;right:56px;bottom:24px;height:1px;background:rgba(244,241,236,.12)}
+  .lookrail .progress i{display:block;height:100%;width:22%;background:var(--rust);transition:width .15s linear}
+
+  /* MARQUEE */
+  .marquee{background:var(--paper);color:var(--ink);overflow:hidden;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:24px 0;position:relative;z-index:1}
+  .marquee .track{display:flex;gap:48px;width:max-content;animation:slide 22s linear infinite;align-items:center}
+  .marquee .track span{font-family:'Bebas Neue',sans-serif;font-size:72px;letter-spacing:.02em;white-space:nowrap;line-height:1;display:inline-flex;align-items:center;gap:48px}
+  .marquee .track span::after{content:"✦";color:var(--rust);font-family:'DM Serif Display',serif;font-style:italic;font-size:36px}
+  .marquee:hover .track{animation-duration:60s}
+  @keyframes slide{to{transform:translateX(-50%)}}
+
+  /* ─── COLLECTION INDEX (vertical rows, archive) ─── */
+  .idx{padding:120px 40px}
+  .idx .head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;padding:0 16px}
+  .idx .head h3{margin:14px 0 0;font-family:'Bebas Neue',sans-serif;font-size:120px;line-height:.9}
+  .idx .head h3 em{font-family:'DM Serif Display',serif;font-style:italic;color:var(--rust)}
+  .idx .filters{display:flex;gap:6px;align-items:center}
+  .idx .filters button{padding:10px 16px;border:1px solid var(--line);border-radius:99px;font:11px/1 'Space Mono';letter-spacing:.18em;text-transform:uppercase;color:#3a3833;transition:all .25s}
+  .idx .filters button:hover{border-color:var(--ink)}
+  .idx .filters button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  .row{display:grid;grid-template-columns:124px 1fr 1.4fr 1fr auto;align-items:center;gap:32px;padding:38px 16px;border-top:1px solid var(--line);position:relative;overflow:hidden;cursor:none;transition:padding .55s cubic-bezier(.16,1,.3,1)}
+  .row:last-child{border-bottom:1px solid var(--line)}
+  .row .ix{display:flex;flex-direction:column;gap:10px;font:11px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:var(--mute)}
+  .row .ix .elglyph{width:34px;height:34px;color:var(--el,var(--rust))}
+  .row .ix .elglyph svg{width:100%;height:100%}
+  .row .ix .elname{font-size:12px;letter-spacing:.24em;color:var(--ink)}
+  .row .ix .elno{font-size:10px;color:var(--mute)}
+  .row .ttl{font-family:'Bebas Neue',sans-serif;font-size:74px;line-height:.88}
+  .row .ttl em{font-family:'DM Serif Display',serif;font-style:italic;color:var(--rust);font-size:.62em;padding-left:.08em}
+  .row .desc{max-width:380px;font-size:13px;line-height:1.55;color:#3a3833}
+  .row .desc strong{color:var(--rust);font-weight:400}
+  .row .stats{display:flex;flex-direction:column;gap:6px;font:11px/1.5 'Space Mono';letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+  .row .stats b{color:var(--ink);font-weight:400}
+  .row .arrow{width:52px;height:52px;border:1px solid var(--ink);border-radius:99px;display:grid;place-items:center;transition:background .3s,color .3s,transform .35s,border-color .3s}
+  .row:hover .arrow{background:var(--rust);border-color:var(--rust);color:var(--paper);transform:rotate(-45deg)}
+  /* Hover slab — slides in from left, garment peeks */
+  .row .slab{position:absolute;left:0;right:0;top:0;bottom:0;background:var(--ink);color:var(--paper);transform:translateY(101%);transition:transform .65s cubic-bezier(.16,1,.3,1);display:grid;grid-template-columns:124px 1fr 1.4fr 1fr auto;align-items:center;gap:32px;padding:38px 16px;z-index:1;pointer-events:none}
+  .row:hover .slab{transform:translateY(0)}
+  .row .slab .ix{color:rgba(244,241,236,.55)}
+  .row .slab .ix .elname{color:var(--paper)}
+  .row .slab .ix .elglyph{color:var(--el,var(--rust))}
+  .row .slab .ttl em{color:var(--rust)}
+  .row .slab .desc{color:rgba(244,241,236,.75)}
+  .row .slab .stats{color:rgba(244,241,236,.55)}
+  .row .slab .stats b{color:var(--paper)}
+  .row .slab .arrow{border-color:var(--rust);background:var(--rust);color:var(--paper);transform:rotate(-45deg)}
+  .row .slab .peek{position:absolute;right:32px;top:50%;transform:translateY(-50%);width:120px;color:var(--el,rgba(244,241,236,.6))}
+  .row .slab .peek svg{width:100%}
+  /* element accent: title em + arrow follow the element hue */
+  .season .row .ttl em{color:var(--el,var(--rust))}
+  .season:hover .row .arrow{background:var(--el,var(--rust));border-color:var(--el,var(--rust))}
+  .season .row .desc strong{color:var(--el,var(--rust))}
+  /* element palette strip inside expand */
+  .elbar{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding:6px 16px 26px;flex-wrap:wrap}
+  .elbar .swatches{display:flex;gap:0}
+  .elbar .swatches i{width:46px;height:30px;display:block}
+  .elbar .eltext{font:11px/1.6 'Space Mono';letter-spacing:.04em;color:var(--mute);max-width:520px}
+  .elbar .eltext b{color:var(--ink);font-weight:400}
+  .elbar .ellead{display:flex;align-items:center;gap:12px;font:11px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:var(--ink)}
+  .elbar .ellead .g{width:26px;height:26px;color:var(--el,var(--rust))}
+
+  /* season wrapper + expand panel */
+  html{scroll-behavior:smooth}
+  .featured,.season{scroll-margin-top:80px}
+  .season{position:relative;transition:opacity .5s ease,transform .5s ease}
+  .season.hide{display:none}
+  .season.open .row .arrow{background:var(--rust);border-color:var(--rust);color:var(--paper);transform:rotate(90deg)}
+  .season.open .row{border-bottom-color:transparent}
+  .expand{max-height:0;overflow:hidden;transition:max-height .6s cubic-bezier(.16,1,.3,1);border-bottom:1px solid var(--line)}
+  .season:last-child .expand{border-bottom:0}
+  .egrid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;padding:8px 16px 44px}
+  .ecard{position:relative;aspect-ratio:3/4;overflow:hidden;background:#191919;color:rgba(244,241,236,.88);display:block;cursor:none}
+  .ecard .egm{position:absolute;inset:0;display:grid;place-items:center;transition:transform .6s cubic-bezier(.16,1,.3,1)}
+  .ecard .egm svg{width:60%;max-width:180px;filter:drop-shadow(0 14px 24px rgba(0,0,0,.45))}
+  .ecard:hover .egm{transform:scale(1.06)}
+  .ecard::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.04) 0 12px,transparent 12px 24px);mix-blend-mode:overlay;pointer-events:none}
+  .ecard .etag{position:absolute;top:12px;left:12px;font:9px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:rgba(244,241,236,.7);z-index:2}
+  .ecard .eadd{position:absolute;left:10px;right:10px;bottom:48px;padding:10px;background:var(--paper);color:var(--ink);font:9px/1 'Space Mono';letter-spacing:.2em;text-transform:uppercase;text-align:center;transform:translateY(160%);transition:transform .4s cubic-bezier(.16,1,.3,1);z-index:3}
+  .ecard:hover .eadd{transform:translateY(0)}
+  .ecard .einfo{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;align-items:flex-end;z-index:2}
+  .ecard .einfo .enm{font-family:'Bebas Neue',sans-serif;font-size:18px;line-height:1}
+  .ecard .einfo .epr{font:10px/1 'Space Mono';letter-spacing:.04em}
+  .ecard.b4,.ecard.b8{color:rgba(34,34,34,.85)}
+  .ecard.b4 .etag,.ecard.b8 .etag,.ecard.b4 .einfo,.ecard.b8 .einfo{color:rgba(34,34,34,.85)}
+  .ecard.b1{background:linear-gradient(170deg,#3a3833,#070605)}
+  .ecard.b2{background:linear-gradient(165deg,#9b8b6f,#2a2418)}
+  .ecard.b3{background:linear-gradient(180deg,#283833,#070b09)}
+  .ecard.b4{background:linear-gradient(180deg,#ece6d6,#a89e85)}
+  .ecard.b5{background:linear-gradient(180deg,#1c2436,#06080f)}
+  .ecard.b6{background:linear-gradient(160deg,#c9572a,#371609)}
+  .ecard.b7{background:linear-gradient(170deg,#4a4138,#1c1810)}
+  .ecard.b8{background:linear-gradient(180deg,#dad3c0,#7e776a)}
+  .efoot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding-top:8px;font:10px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:var(--mute)}
+  .filtnote{padding:48px 16px;text-align:center;font:12px/1 'Space Mono';letter-spacing:.18em;text-transform:uppercase;color:var(--mute);display:none}
+  .filtnote.show{display:block}
+
+  /* toast */
+  .toast{position:fixed;top:90px;right:28px;z-index:60;background:var(--ink);color:var(--paper);padding:18px 22px;display:flex;gap:16px;align-items:center;transform:translateX(150%);transition:transform .5s cubic-bezier(.16,1,.3,1);max-width:340px;border-left:2px solid var(--rust)}
+  .toast.show{transform:translateX(0)}
+  .toast .tx{font:11px/1.5 'Space Mono';letter-spacing:.06em}
+  .toast .tx b{font-family:'Bebas Neue';font-size:20px;letter-spacing:.02em;display:block;text-transform:uppercase}
+  .toast .tx small{color:rgba(244,241,236,.6);text-transform:uppercase;letter-spacing:.18em;font-size:9px}
+
+  /* ─── ATELIER NOTE ─── */
+  .note{padding:160px 56px;background:var(--ink);color:var(--paper);position:relative;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+  .note .l{position:relative}
+  .note .l .eyebrow{color:#9c968a}
+  .note .l h2{margin:18px 0 0;font-family:'DM Serif Display',serif;font-style:italic;font-size:84px;line-height:1.04;max-width:580px}
+  .note .l h2 em{font-family:'Bebas Neue',sans-serif;font-style:normal;color:var(--rust);font-weight:400;font-size:1.08em;letter-spacing:.01em}
+  .note .l blockquote{margin:48px 0 0;font-size:14px;line-height:1.95;color:rgba(244,241,236,.78);max-width:480px}
+  .note .l blockquote::before{content:"\201C";display:block;font-family:'DM Serif Display',serif;font-style:italic;font-size:90px;line-height:.4;color:var(--rust);margin-bottom:12px}
+  .note .l .sign{margin-top:40px;display:flex;align-items:center;gap:18px;font:11px/1.4 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:#9c968a}
+  .note .l .sign .sg{font-family:'DM Serif Display',serif;font-style:italic;font-size:30px;color:var(--paper);text-transform:none;letter-spacing:0;line-height:1}
+  .note .r{position:relative;aspect-ratio:1/1;background:#1a1a1a;overflow:hidden}
+  .note .r .ph{position:absolute;inset:0;background:
+    repeating-linear-gradient(120deg,rgba(244,241,236,.045) 0 14px,transparent 14px 28px),
+    linear-gradient(180deg,#262624 0%,#0c0c0b 100%);
+  }
+  .note .r .cnr{position:absolute;width:18px;height:18px;border:1px solid var(--paper);opacity:.6}
+  .note .r .cnr.tl{top:14px;left:14px;border-right:0;border-bottom:0}
+  .note .r .cnr.br{bottom:14px;right:14px;border-left:0;border-top:0}
+  .note .r .lbl{position:absolute;left:18px;bottom:18px;font:10px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:rgba(244,241,236,.6)}
+  .note .r .num{position:absolute;top:18px;right:18px;font-family:'Bebas Neue';font-size:80px;color:var(--paper);line-height:1}
+  .note .r .seal{position:absolute;left:50%;top:50%;width:220px;height:220px;border-radius:50%;border:1px solid rgba(244,241,236,.18);transform:translate(-50%,-50%);display:grid;place-items:center;animation:spin 30s linear infinite}
+  .note .r .seal .core{font-family:'DM Serif Display';font-style:italic;font-size:48px;color:var(--rust)}
+  .note .r .seal svg{position:absolute;inset:0;width:100%;height:100%}
+  @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+  /* ─── NEXT SECTION CTA ─── */
+  .nextcta{padding:140px 40px;text-align:center;background:var(--paper);position:relative}
+  .nextcta .eyebrow{margin-bottom:18px}
+  .nextcta h3{margin:0 0 28px;font-family:'Bebas Neue';font-size:200px;line-height:.86}
+  .nextcta h3 em{font-family:'DM Serif Display',serif;font-style:italic;color:var(--rust)}
+  .nextcta .acts{display:flex;gap:14px;justify-content:center}
+
+  /* FOOTER */
+  .ft{background:var(--paper);padding:80px 40px 32px;border-top:1px solid var(--line)}
+  .ft-top{display:grid;grid-template-columns:1.4fr 2fr;gap:60px;padding-bottom:60px;border-bottom:1px solid var(--line)}
+  .ft-brand .display{font-size:160px;line-height:.86;display:inline-block;transition:letter-spacing .8s cubic-bezier(.16,1,.3,1),color .3s}
+  .ft-brand:hover .display{letter-spacing:.04em;color:var(--rust)}
+  .ft-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:40px}
+  .ft-cols > div{display:flex;flex-direction:column;gap:10px;font:12px/1.8 'Space Mono';color:#3a3833}
+  .ft-cols b{font-weight:400;font:11px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}
+  .ft-cols a:hover{color:var(--rust)}
+  .ft-bot{display:flex;justify-content:space-between;align-items:center;padding-top:22px;font:11px/1 'Space Mono';letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+
+  /* Sticky side season nav */
+  .sidenav{position:fixed;left:18px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:14px;font:10px/1 'Space Mono';letter-spacing:.22em;text-transform:uppercase;color:var(--mute);mix-blend-mode:difference;color:#aaa;pointer-events:auto}
+  .sidenav a{display:flex;align-items:center;gap:10px;cursor:none;transition:color .25s}
+  .sidenav a i{width:18px;height:1px;background:currentColor;transition:width .35s,background .25s}
+  .sidenav a.on,.sidenav a:hover{color:var(--rust)}
+  .sidenav a.on i,.sidenav a:hover i{width:36px;background:var(--rust)}
+
+  /* ════ RESPONSIVE ════ */
+  @media (max-width:860px){
+    body{cursor:auto}
+    .cur-dot,.cur-ring{display:none}
+    a,button,input,select{cursor:pointer}
+    .sidenav{display:none}
+    .nav{grid-template-columns:1fr auto;padding:12px 16px}
+    .nav ul{display:none}
+    .nav .brand{font-size:26px}
+    .nav .brand small{display:none}
+    .nav .right .ccy{display:none}
+    .cart{padding:9px 14px;font-size:10px}
+    .crumbs{padding:78px 16px 0;font-size:10px;flex-wrap:wrap;gap:8px}
+    /* page head */
+    .pageHead{padding:30px 16px 50px}
+    .pageHead h1{font-size:clamp(74px,20vw,150px)}
+    .pageHead .meta{flex-direction:column;align-items:flex-start;gap:26px}
+    .pageHead .meta .l{flex-wrap:wrap;gap:26px 30px}
+    /* year rail */
+    .yrail{font-size:34px;gap:18px;padding:18px 16px}
+    .yrail span.div{font-size:20px}
+    /* featured */
+    .featured{grid-template-columns:1fr}
+    .featured .left{padding:48px 16px}
+    .featured .left h2{font-size:clamp(96px,28vw,180px)}
+    .featured .left .sub{font-size:26px}
+    .featured .left .specs{grid-template-columns:1fr 1fr;gap:18px}
+    .featured .left .acts{flex-wrap:wrap}
+    .featured .right{min-height:70vh}
+    /* look rail */
+    .lookrail .head{flex-direction:column;align-items:flex-start;gap:16px;padding:36px 16px 24px}
+    .lookrail .head h3{font-size:48px}
+    .lookrail .scroller{padding:0 16px 50px;gap:14px}
+    .look{flex-basis:74vw;max-width:300px}
+    .lookrail .progress{left:16px;right:16px}
+    /* index */
+    .idx{padding:70px 16px}
+    .idx .head{flex-direction:column;align-items:flex-start;gap:20px;padding:0}
+    .idx .head h3{font-size:64px}
+    .idx .filters{flex-wrap:wrap}
+    /* season rows → stacked cards (no hover slab on touch) */
+    .row{grid-template-columns:1fr;gap:14px;padding:28px 4px}
+    .row .ix{flex-direction:row;align-items:center;gap:12px}
+    .row .ix .elglyph{width:26px;height:26px}
+    .row .ttl{font-size:52px}
+    .row .desc{max-width:none}
+    .row .stats{flex-direction:row;flex-wrap:wrap;gap:8px 20px}
+    .row .arrow{display:none}
+    .row .slab{display:none}
+    .egrid{grid-template-columns:1fr 1fr;gap:12px}
+    .elbar{flex-direction:column;align-items:flex-start;gap:10px;padding:4px 4px 20px}
+    .efoot{flex-direction:column;gap:8px;align-items:flex-start}
+    /* note */
+    .note{grid-template-columns:1fr;padding:70px 16px;gap:40px}
+    .note .l h2{font-size:48px}
+    .note .r{aspect-ratio:1/1}
+    /* next cta */
+    .nextcta{padding:80px 16px}
+    .nextcta h3{font-size:clamp(72px,20vw,140px)}
+    .nextcta .acts{flex-direction:column;align-items:center}
+    /* footer */
+    .ft{padding:56px 16px 28px}
+    .ft-top{grid-template-columns:1fr;gap:32px}
+    .ft-brand .display{font-size:96px}
+    .ft-cols{grid-template-columns:1fr 1fr;gap:24px}
+    .ft-bot{flex-direction:column;gap:8px;align-items:flex-start}
+    .marquee .track span{font-size:46px;gap:30px}
+  }
+  @media (max-width:480px){
+    .egrid{grid-template-columns:1fr}
+    .ft-cols{grid-template-columns:1fr}
+    .featured .left .specs{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+<canvas id="cosmos"></canvas>
+<div class="cur-ring" id="curRing"></div>
+<div class="cur-dot" id="curDot"></div>
+
+<div class="wrap">
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="brand"><a href="VOID.html"><span>grumb</span></a><small>EST. MMXXII / TOKYO ↔ PARIS</small></div>
+  <ul>
+    <li><a href="Collections.html" class="on">Collections</a></li>
+    <li><a href="VOID.html#editorial">Editorial</a></li>
+    <li><a href="Account.html">Account</a></li>
+    <li><a href="Track.html">Track</a></li>
+  </ul>
+  <div class="right">
+    <span class="ccy"><i class="dot"></i> JPY ¥ / EN</span>
+    <button class="cart" id="cartBtn" data-hot>Bag<span class="n" id="cartN" data-cartcount>02</span></button>
+  </div>
+</nav>
+
+<!-- Sticky side season nav -->
+<nav class="sidenav">
+  <a href="#s-ss24" class="on" data-hot><i></i>SS 24 · Fog</a>
+  <a href="#s-fw23" data-hot><i></i>Water</a>
+  <a href="#s-ss23" data-hot><i></i>Air</a>
+  <a href="#s-fw22" data-hot><i></i>Earth</a>
+  <a href="#s-ss22" data-hot><i></i>Fire</a>
+  <a href="#s-archive" data-hot><i></i>Aether</a>
+</nav>
+
+<!-- CRUMBS -->
+<div class="crumbs">
+  <span><a href="VOID.html">grumb</a> &nbsp;/&nbsp; Collections</span>
+  <span>N°024 / VOL.07 — 05 SEASONS LISTED</span>
+</div>
+
+<!-- PAGE HEAD -->
+<header class="pageHead">
+  <h1 id="ph">
+    <span class="lm"><span>COLLECTIONS</span></span>
+    <span class="lm"><span class="ital">— archive.</span></span>
+  </h1>
+  <div class="meta">
+    <div class="l">
+      <div class="k"><div class="n" data-num="24"><em>—</em></div><div class="lbl">Seasons<br>archived</div></div>
+      <div class="k"><div class="n" data-num="340" data-suf="+"><em>—</em></div><div class="lbl">Total<br>pieces</div></div>
+      <div class="k"><div class="n" data-num="6"><em>—</em></div><div class="lbl">Editorial<br>volumes</div></div>
+      <div class="k"><div class="n" data-num="2"><em>—</em></div><div class="lbl">Houses<br>(Tokyo, Paris)</div></div>
+    </div>
+    <p>Eight years of <em>silent intent.</em> Every grumb collection remains in the permanent archive — none reissued, none retired. Browse by season, or read the editorial behind each volume.</p>
+  </div>
+</header>
+
+<!-- YEAR RAIL -->
+<div class="yrail" id="yrail">
+  <a href="#s-ss24" class="on" data-hot>SS 24</a>
+  <span class="div">/</span>
+  <a href="#s-fw23" data-hot>Water</a>
+  <span class="div">/</span>
+  <a href="#s-ss23" data-hot>Air</a>
+  <span class="div">/</span>
+  <a href="#s-fw22" data-hot>Earth</a>
+  <span class="div">/</span>
+  <a href="#s-ss22" data-hot>Fire</a>
+  <span class="div">/</span>
+  <a href="#s-archive" data-hot>Aether</a>
+</div>
+
+<!-- FEATURED SS24 -->
+<section class="featured" id="s-ss24">
+  <div class="left">
+    <div class="top">
+      <span>VOLUME 07 · SS 2024</span>
+      <span>N°024 / DROP 03</span>
+    </div>
+    <div>
+      <span class="eyebrow dark">— current season</span>
+      <h2 class="reveal">FOG <em>—</em><br>FIELD.</h2>
+      <div class="sub reveal d2">A study in <em>weight</em> &amp; <em>weather</em> — six looks photographed an hour before dawn on the Kanagawa coast.</div>
+      <p class="lede reveal d3">Utilitarian volumes engineered for the in-between hour. Carbon-brushed cotton, salt-resistant nylon, and a palette of fog, terracotta &amp; bone. Layering theory worn close to the body.</p>
+    </div>
+    <div class="specs reveal d4">
+      <div class="k"><div class="n">06</div><div class="lbl">Looks</div></div>
+      <div class="k"><div class="n">18</div><div class="lbl">Pieces</div></div>
+      <div class="k"><div class="n">04</div><div class="lbl">Materials</div></div>
+      <div class="k"><div class="n"><em>02.24</em></div><div class="lbl">Released</div></div>
+    </div>
+    <div class="acts reveal d4">
+      <a class="btn dark" data-hot href="#lookbook">View the lookbook <i class="arr"></i></a>
+      <a class="btn dark" data-hot href="VOID.html#collections">Shop SS 24</a>
+    </div>
+  </div>
+  <div class="right">
+    <div class="ph"></div>
+    <span class="cnr tl"></span><span class="cnr br"></span>
+    <div class="stamp">FOG / FIELD · SS 24 · VOLUME 07</div>
+    <div class="tagTop"><span>SEASON</span><b>07</b><span>SS 2024</span></div>
+    <div class="garmentBig">
+      <!-- featured coat svg -->
+      <svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M48 58 L72 50 L92 78 L100 100 L108 78 L128 50 L152 58 L172 86 L182 270 L156 280 L148 110 L148 280 L52 280 L52 110 L44 280 L18 270 L28 86 Z" fill="rgba(244,241,236,0.06)"/>
+        <path d="M72 50 L80 170 L100 100 L120 170 L128 50" opacity="0.85"/>
+        <path d="M40 180 L160 180" opacity="0.6"/>
+        <path d="M78 184 L122 184 L122 192 L78 192 Z" fill="rgba(201,76,26,0.85)" stroke="none"/>
+        <circle cx="82" cy="140" r="2.2" fill="currentColor" stroke="none"/>
+        <circle cx="118" cy="140" r="2.2" fill="currentColor" stroke="none"/>
+        <circle cx="82" cy="165" r="2.2" fill="currentColor" stroke="none"/>
+        <circle cx="118" cy="165" r="2.2" fill="currentColor" stroke="none"/>
+        <path d="M68 220 L94 220 L94 250 L68 250 Z M106 220 L132 220 L132 250 L106 250 Z" opacity="0.55"/>
+      </svg>
+    </div>
+    <div class="scroll-marker"><i></i>SCROLL — 06 LOOKS</div>
+  </div>
+</section>
+
+<!-- LOOK RAIL -->
+<section class="lookrail" id="lookbook">
+  <div class="head">
+    <h3><span>SS 24 / 06 LOOKS</span>Fog &amp; Field</h3>
+    <div class="ctl">
+      <button id="lL" data-hot aria-label="prev"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 4 7 12l8 8"/></svg></button>
+      <button id="lR" data-hot aria-label="next"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 4l8 8-8 8"/></svg></button>
+    </div>
+  </div>
+  <div class="scroller" id="lookScroller"></div>
+  <div class="progress"><i id="lookProg"></i></div>
+</section>
+
+<!-- MARQUEE -->
+<section class="marquee" aria-hidden="true">
+  <div class="track">
+    <span>VOLUME 07</span><span>FOG / FIELD</span><span>SS 2024</span><span>06 LOOKS</span><span>grumb COLLECTIVE</span>
+    <span>VOLUME 07</span><span>FOG / FIELD</span><span>SS 2024</span><span>06 LOOKS</span><span>grumb COLLECTIVE</span>
+  </div>
+</section>
+
+<!-- INDEX / OLDER SEASONS -->
+<section class="idx" id="s-index">
+  <div class="head">
+    <div>
+      <span class="eyebrow">— five seasons, five elements</span>
+      <h3>Bound to<br>the <em>elements.</em></h3>
+    </div>
+    <div class="filters" id="filters">
+      <button class="on" data-f="all" data-hot>All</button>
+      <button data-f="ss" data-hot>Spring/Summer</button>
+      <button data-f="fw" data-hot>Fall/Winter</button>
+      <button data-f="capsule" data-hot>Capsules</button>
+    </div>
+  </div>
+
+  <div class="filtnote" id="filtnote">No volumes in this category.</div>
+
+  <div class="season reveal" data-type="fw" data-season="fw23" id="s-fw23" style="--el:#2e7d8c">
+  <div class="row" data-hot>
+    <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 21 L3.5 5 L20.5 5 Z"/></svg></span><span class="elname">Water</span><span class="elno">N°23 · FW 23</span></div>
+    <div class="ttl">TIDE <em>— SALT.</em></div>
+    <div class="desc">Water — Indigo-dyed wool and salt-cured shells, an <strong>archive of overcoats</strong> shot in the Hokkaido fog. 22 pieces, 7 looks.</div>
+    <div class="stats"><span><b>07</b> Looks</span><span><b>22</b> Pieces</span><span><b>10.23</b> Released</span></div>
+    <div class="arrow">↗</div>
+    <div class="slab">
+      <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 21 L3.5 5 L20.5 5 Z"/></svg></span><span class="elname">Water</span><span class="elno">FW 23</span></div>
+      <div class="ttl">TIDE <em>— SALT.</em></div>
+      <div class="desc">Weight that moves like water. Long-coat geometry in salt-cured wool. <strong>Open the volume →</strong></div>
+      <div class="stats"><span><b>07</b> Looks</span><span><b>22</b> Pieces</span><span><b>10.23</b> Released</span></div>
+      <div class="arrow">↗</div>
+      <div class="peek">
+        <svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M48 58 L72 50 L100 100 L128 50 L152 58 L172 86 L182 270 L156 280 L148 110 L148 280 L52 280 L52 110 L44 280 L18 270 L28 86 Z"/>
+          <path d="M72 50 L100 100 L128 50" opacity=".85"/>
+          <circle cx="100" cy="160" r="2.4" fill="#c94c1a" stroke="none"/>
+          <circle cx="100" cy="190" r="2.4" fill="#c94c1a" stroke="none"/>
+          <circle cx="100" cy="220" r="2.4" fill="#c94c1a" stroke="none"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="expand"><div class="egrid" data-grid="fw23"></div></div>
+  </div>
+
+  <div class="season reveal d1" data-type="ss" data-season="ss23" id="s-ss23" style="--el:#5e7480">
+  <div class="row" data-hot>
+    <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3 L20.5 19 L3.5 19 Z"/><line x1="7" y1="14" x2="17" y2="14"/></svg></span><span class="elname">Air</span><span class="elno">N°22 · SS 23</span></div>
+    <div class="ttl">DRIFT <em>— BREATH.</em></div>
+    <div class="desc">Air — <strong>Linen and bone</strong>, paper-weight layers and loose tailoring built to move with the wind. The first archive of objects.</div>
+    <div class="stats"><span><b>06</b> Looks</span><span><b>19</b> Pieces</span><span><b>03.23</b> Released</span></div>
+    <div class="arrow">↗</div>
+    <div class="slab">
+      <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3 L20.5 19 L3.5 19 Z"/><line x1="7" y1="14" x2="17" y2="14"/></svg></span><span class="elname">Air</span><span class="elno">SS 23</span></div>
+      <div class="ttl">DRIFT <em>— BREATH.</em></div>
+      <div class="desc">A wardrobe that recedes into light. <strong>Open the volume →</strong></div>
+      <div class="stats"><span><b>06</b> Looks</span><span><b>19</b> Pieces</span><span><b>03.23</b> Released</span></div>
+      <div class="arrow">↗</div>
+      <div class="peek">
+        <svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M52 30 L148 30 L148 56 L52 56 Z"/>
+          <path d="M52 56 L46 270 L92 270 L98 64 L102 64 L108 270 L154 270 L148 56"/>
+          <circle cx="100" cy="46" r="2.5" fill="#c94c1a" stroke="none"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="expand"><div class="egrid" data-grid="ss23"></div></div>
+  </div>
+
+  <div class="season reveal d2" data-type="fw" data-season="fw22" id="s-fw22" style="--el:#9a6a32">
+  <div class="row" data-hot>
+    <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 21 L3.5 5 L20.5 5 Z"/><line x1="7" y1="10" x2="17" y2="10"/></svg></span><span class="elname">Earth</span><span class="elno">N°21 · FW 22</span></div>
+    <div class="ttl">CLAY <em>— FORM.</em></div>
+    <div class="desc">Earth — The architectural volume. Sculpted bombers and dome parkas in clay-dyed canvas, <strong>the original Convex silhouette</strong>. Shot in Paris.</div>
+    <div class="stats"><span><b>08</b> Looks</span><span><b>24</b> Pieces</span><span><b>10.22</b> Released</span></div>
+    <div class="arrow">↗</div>
+    <div class="slab">
+      <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 21 L3.5 5 L20.5 5 Z"/><line x1="7" y1="10" x2="17" y2="10"/></svg></span><span class="elname">Earth</span><span class="elno">FW 22</span></div>
+      <div class="ttl">CLAY <em>— FORM.</em></div>
+      <div class="desc">Volume pressed from the ground up. <strong>The original Dome Parka. Open the volume →</strong></div>
+      <div class="stats"><span><b>08</b> Looks</span><span><b>24</b> Pieces</span><span><b>10.22</b> Released</span></div>
+      <div class="arrow">↗</div>
+      <div class="peek">
+        <svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M68 60 C72 22 128 22 132 60"/>
+          <path d="M70 78 Q100 68 130 78 L152 86 L178 102 L188 250 L160 262 L150 220 L150 268 Q125 274 100 274 Q75 274 50 268 L50 220 L40 262 L12 250 L22 102 L48 86 Z"/>
+          <circle cx="92" cy="62" r="2.5" fill="#c94c1a" stroke="none"/>
+          <circle cx="108" cy="62" r="2.5" fill="#c94c1a" stroke="none"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="expand"><div class="egrid" data-grid="fw22"></div></div>
+  </div>
+
+  <div class="season reveal d3" data-type="ss" data-season="ss22" id="s-ss22" style="--el:#c94c1a">
+  <div class="row" data-hot>
+    <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3 L20.5 19 L3.5 19 Z"/></svg></span><span class="elname">Fire</span><span class="elno">N°20 · SS 22</span></div>
+    <div class="ttl">EMBER <em>— ORIGIN.</em></div>
+    <div class="desc">Fire — The founding volume and the first spark. Kiln-dyed cotton in ember and rust — <strong>the five originals</strong>: coat, trouser, crew, shirt, scarf.</div>
+    <div class="stats"><span><b>05</b> Looks</span><span><b>05</b> Pieces</span><span><b>03.22</b> Released</span></div>
+    <div class="arrow">↗</div>
+    <div class="slab">
+      <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3 L20.5 19 L3.5 19 Z"/></svg></span><span class="elname">Fire</span><span class="elno">SS 22</span></div>
+      <div class="ttl">EMBER <em>— ORIGIN.</em></div>
+      <div class="desc">Where the house was lit. <strong>The founding five. Open the volume →</strong></div>
+      <div class="stats"><span><b>05</b> Looks</span><span><b>05</b> Pieces</span><span><b>03.22</b> Released</span></div>
+      <div class="arrow">↗</div>
+      <div class="peek">
+        <svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M76 70 Q100 60 124 70"/>
+          <path d="M70 78 Q100 70 130 78 L152 88 L178 104 L184 200 L158 212 L150 200 L150 232 L50 232 L50 200 L42 212 L16 200 L22 104 L48 88 Z"/>
+          <path d="M50 232 L150 232 L148 254 L52 254 Z" opacity=".8"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="expand"><div class="egrid" data-grid="ss22"></div></div>
+  </div>
+
+  <div class="season reveal d4" data-type="capsule" data-season="archive" id="s-archive" style="--el:#7a6488">
+  <div class="row" data-hot>
+    <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/></svg></span><span class="elname">Aether</span><span class="elno">N°18–15 · ARCHIVE</span></div>
+    <div class="ttl">VOID <em>— ETHER.</em></div>
+    <div class="desc">Aether — The fifth element, the formless one. <strong>Pre-founding atelier work</strong> from Kyoto: paper-thread shirts, woodblock-dyed wool. The void the house is named for.</div>
+    <div class="stats"><span><b>04</b> Seasons</span><span><b>32</b> Pieces</span><span><b>—</b> On request</span></div>
+    <div class="arrow">↗</div>
+    <div class="slab">
+      <div class="ix"><span class="elglyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/></svg></span><span class="elname">Aether</span><span class="elno">2019–2021</span></div>
+      <div class="ttl">VOID <em>— ETHER.</em></div>
+      <div class="desc">Before form, the void. <strong>Pre-grumb atelier work. Open the archive →</strong></div>
+      <div class="stats"><span><b>04</b> Seasons</span><span><b>32</b> Pieces</span><span><b>—</b> On request</span></div>
+      <div class="arrow">↗</div>
+      <div class="peek">
+        <svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M70 70 Q100 60 130 70 L154 80 L182 96 L186 200 L160 216 L150 184 L150 252 L50 252 L50 184 L40 216 L14 200 L18 96 L46 80 Z"/>
+          <path d="M60 100 L60 240 M80 100 L80 240 M100 100 L100 240 M120 100 L120 240 M140 100 L140 240" opacity=".25"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="expand"><div class="egrid" data-grid="archive"></div></div>
+  </div>
+</section>
+
+<!-- ATELIER NOTE -->
+<section class="note">
+  <div class="l">
+    <span class="eyebrow dark">— atelier note</span>
+    <h2 class="reveal">A wardrobe is not <em>built —</em> it is <em>kept.</em></h2>
+    <blockquote class="reveal d1">grumb does not produce trend-pieces, capsules, or collaborations. We make one volume per season, designed to outlast its release, and we never re-issue. The collection page is the catalogue, the archive, and the manifesto.</blockquote>
+    <div class="sign reveal d2">
+      <span class="sg">M. Asano</span>
+      <span>Founder &amp; Director<br>Tokyo · Paris</span>
+    </div>
+  </div>
+  <div class="r reveal d2">
+    <div class="ph"></div>
+    <span class="cnr tl"></span><span class="cnr br"></span>
+    <div class="num">02</div>
+    <div class="lbl">Atelier, Kyoto · 04:18</div>
+    <div class="seal">
+      <svg viewBox="0 0 220 220">
+        <defs>
+          <path id="circlePath" d="M 110, 110 m -94, 0 a 94,94 0 1,1 188,0 a 94,94 0 1,1 -188,0"/>
+        </defs>
+        <text fill="#9c968a" font-family="Space Mono" font-size="10" letter-spacing="6">
+          <textPath href="#circlePath">grumb · COLLECTIVE · EST · MMXXII · TOKYO · PARIS · ARCHIVE · 24 · SEASONS · </textPath>
+        </text>
+      </svg>
+      <span class="core">g</span>
+    </div>
+  </div>
+</section>
+
+<!-- NEXT CTA -->
+<section class="nextcta">
+  <span class="eyebrow">— next</span>
+  <h3 class="reveal">Shop the <em>current</em><br>volume.</h3>
+  <div class="acts">
+    <a class="btn primary" data-hot href="VOID.html#collections">Enter the shop <i class="arr"></i></a>
+    <a class="btn" data-hot href="VOID.html#editorial">Read editorial №07</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="ft">
+  <div class="ft-top">
+    <div class="ft-brand">
+      <a href="VOID.html"><div class="display">grumb</div></a>
+      <div class="eyebrow" style="margin-top:14px">— infinite style. eternal chic.</div>
+    </div>
+    <div class="ft-cols">
+      <div><b>Shop</b><a href="Product.html?p=parka">Outerwear</a><a href="Product.html?p=suit">Tailoring</a><a href="Product.html?p=knit">Knit</a><a href="VOID.html#collections">Objects</a><a href="#s-archive">Archive</a></div>
+      <div><b>House</b><a href="VOID.html#editorial">Editorial</a><a href="VOID.html#about">The Register</a><a href="VOID.html#stockists">Stockists</a><a href="VOID.html#about">Atelier visits</a></div>
+      <div><b>Service</b><a href="VOID.html#about">Shipping</a><a href="VOID.html#about">Returns</a><a href="VOID.html#about">Care</a><a href="VOID.html#about">Sizing</a><a href="VOID.html#stockists">Contact</a></div>
+      <div><b>Legal</b><a href="VOID.html#about">Privacy</a><a href="VOID.html#about">Terms</a><a href="VOID.html#about">Imprint</a></div>
+    </div>
+  </div>
+  <div class="ft-bot">
+    <span>© grumb 2024 — All wrongs reserved.</span>
+    <span>Tokyo ↔ Paris</span>
+    <span>Site by grumb Studio</span>
+  </div>
+</footer>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="tx"><b id="toastNm">Bag</b><small id="toastMeta">2 pieces</small></div></div>
+
+<script>
+/* ─── cursor ─── */
+const curDot=document.getElementById('curDot'),curRing=document.getElementById('curRing');
+let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function l(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;
+  curDot.style.transform=`translate(${mx}px,${my}px) translate(-50%,-50%)`;
+  curRing.style.transform=`translate(${rx}px,${ry}px) translate(-50%,-50%)`;
+  requestAnimationFrame(l)})();
+document.addEventListener('mouseover',e=>{const h=e.target.closest('[data-hot], a, button, input, .row');if(h)curRing.classList.add('is-hot')});
+document.addEventListener('mouseout',e=>{const h=e.target.closest('[data-hot], a, button, input, .row');if(h&&!e.relatedTarget?.closest('[data-hot], a, button, input, .row'))curRing.classList.remove('is-hot')});
+addEventListener('mousemove',()=>{const el=document.elementFromPoint(mx,my);if(!el)return;
+  const onDark=!!el.closest('.featured, .lookrail, .note, .row .slab');
+  curRing.classList.toggle('is-dark',onDark)});
+
+/* ─── particles ─── */
+const c=document.getElementById('cosmos'),x=c.getContext('2d');let W,H,dpr=Math.min(devicePixelRatio||1,2);
+function rs(){W=c.clientWidth=innerWidth;H=c.clientHeight=innerHeight;c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',rs);rs();
+const N=160,P=Array.from({length:N},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,r:Math.random()*1.4+.4,ph:Math.random()*Math.PI*2,rust:Math.random()<.15}));
+let pmx=-9999,pmy=-9999;addEventListener('mousemove',e=>{pmx=e.clientX;pmy=e.clientY});
+(function d(){x.clearRect(0,0,W,H);const t=performance.now()*.001;
+  for(let i=0;i<N;i++){const p=P[i],dx=p.x-pmx,dy=p.y-pmy,d2=dx*dx+dy*dy;
+    if(d2<14400){const d=Math.sqrt(d2)||1,f=(120-d)/120*.6;p.vx+=dx/d*f*.06;p.vy+=dy/d*f*.06}
+    p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy*=.985;
+    p.vx+=(Math.random()-.5)*.01;p.vy+=(Math.random()-.5)*.01;
+    if(p.x<-10)p.x=W+10;if(p.x>W+10)p.x=-10;if(p.y<-10)p.y=H+10;if(p.y>H+10)p.y=-10;
+    const u=.55+.45*Math.sin(t*1.4+p.ph);
+    x.fillStyle=p.rust?`rgba(201,76,26,${.55*u})`:`rgba(10,10,10,${.5*u})`;
+    x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);x.fill()}
+  for(let i=0;i<N;i++){const a=P[i];for(let j=i+1;j<N;j++){const b=P[j];const dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;
+    if(d2<10000){const d=Math.sqrt(d2),al=(1-d/100)*.22;
+      x.strokeStyle=(a.rust||b.rust)?`rgba(201,76,26,${al})`:`rgba(10,10,10,${al})`;
+      x.lineWidth=.6;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke()}}}
+  requestAnimationFrame(d)})();
+
+/* ─── nav scroll ─── */
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>40),{passive:true});
+
+/* ─── reveal ─── */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.reveal, section, .ft').forEach(el=>{el.classList.add('reveal');io.observe(el)});
+
+/* ─── hero stagger ─── */
+setTimeout(()=>document.getElementById('ph').classList.add('ready'),120);
+
+/* ─── stat count-up ─── */
+const cio=new IntersectionObserver(es=>es.forEach(en=>{if(!en.isIntersecting)return;cio.unobserve(en.target);
+  en.target.querySelectorAll('.n[data-num]').forEach(el=>{const to=+el.dataset.num,suf=el.dataset.suf||'',s=performance.now(),d=1400;
+    (function st(){const t=Math.min(1,(performance.now()-s)/d),e=1-Math.pow(1-t,3),v=Math.floor(to*e);
+      el.innerHTML=v+(suf?`<em>${suf}</em>`:'');if(t<1)requestAnimationFrame(st)})()})}),{threshold:.4});
+document.querySelectorAll('.pageHead .meta .l, .featured .specs').forEach(e=>cio.observe(e));
+
+/* ─── magnetic ─── */
+function mag(sel,k){document.querySelectorAll(sel).forEach(el=>{let raf;
+  el.addEventListener('mouseenter',()=>{el.style.transition='transform .15s cubic-bezier(.16,1,.3,1)'});
+  el.addEventListener('mousemove',e=>{const r=el.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2);
+    cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{el.style.transform=`translate3d(${x*k}px,${y*k}px,0)`})});
+  el.addEventListener('mouseleave',()=>{el.style.transition='transform .55s cubic-bezier(.16,1,.3,1)';el.style.transform=''})})}
+mag('.btn, .cart, .lookrail .ctl button',.28);
+mag('.row .arrow',.4);
+
+/* ─── look rail scroll progress + arrows ─── */
+const scroller=document.getElementById('lookScroller'),lp=document.getElementById('lookProg');
+const looks=[
+  {n:'Look 01',sub:'Fog / Carbon',pr:'¥18,000',cls:'b1',g:'parka'},
+  {n:'Look 02',sub:'Atelier Drape',pr:'¥24,500',cls:'b2',g:'suit'},
+  {n:'Look 03',sub:'Bone / Sand',pr:'¥8,900',cls:'b4',g:'hoodie'},
+  {n:'Look 04',sub:'Salt / Ash',pr:'¥11,250',cls:'b3',g:'bomber'},
+  {n:'Look 05',sub:'Long / Navy',pr:'¥32,000',cls:'b5',g:'coat'},
+  {n:'Look 06',sub:'Terracotta',pr:'¥15,500',cls:'b6',g:'utility'},
+  {n:'Look 07',sub:'Field / Brushed',pr:'¥9,800',cls:'b7',g:'trouser'},
+  {n:'Look 08',sub:'Quiet Knit',pr:'¥12,600',cls:'b8',g:'knit'},
+];
+const G={
+  parka:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M68 60 C72 22 128 22 132 60"/><path d="M68 60 L72 78 M132 60 L128 78"/><path d="M70 78 Q100 68 130 78 L152 86 L178 102 L188 250 L160 262 L150 220 L150 268 Q125 274 100 274 Q75 274 50 268 L50 220 L40 262 L12 250 L22 102 L48 86 Z" fill="rgba(244,241,236,.05)"/><path d="M100 78 L100 268" stroke-dasharray="3 4" opacity=".7"/><path d="M58 178 L82 178 L82 206 L58 206 Z M118 178 L142 178 L142 206 L118 206 Z" opacity=".8"/><circle cx="92" cy="62" r="2.2" fill="#c94c1a" stroke="none"/><circle cx="108" cy="62" r="2.2" fill="#c94c1a" stroke="none"/></svg>`,
+  suit:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M52 60 L70 50 L100 64 L130 50 L148 60 L168 90 L180 250 L150 264 L140 110 L140 264 L60 264 L60 110 L50 264 L20 250 L32 90 Z" fill="rgba(244,241,236,.05)"/><path d="M70 50 L82 130 L100 64 L118 130 L130 50" opacity=".85"/><circle cx="100" cy="160" r="2" fill="currentColor" stroke="none"/><circle cx="100" cy="190" r="2" fill="currentColor" stroke="none"/><circle cx="100" cy="220" r="2" fill="currentColor" stroke="none"/></svg>`,
+  bomber:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M76 70 Q100 60 124 70"/><path d="M70 78 Q100 70 130 78 L152 88 L178 104 L184 200 L158 212 L150 200 L150 232 L50 232 L50 200 L42 212 L16 200 L22 104 L48 88 Z" fill="rgba(244,241,236,.05)"/><path d="M50 232 L150 232 L148 254 L52 254 Z" fill="rgba(244,241,236,.08)"/><path d="M100 78 L100 232" stroke-dasharray="3 4" opacity=".7"/><rect x="96" y="70" width="8" height="4" fill="#c94c1a" stroke="none"/></svg>`,
+  hoodie:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M72 64 C76 36 124 36 128 64 L128 86 Q100 78 72 86 Z" fill="rgba(244,241,236,.05)"/><path d="M72 86 L48 96 L20 112 L10 252 L40 264 L52 116 L52 268 Q100 274 148 268 L148 116 L160 264 L190 252 L180 112 L152 96 L128 86" fill="rgba(244,241,236,.04)"/><path d="M68 174 Q100 192 132 174 L142 222 Q100 232 58 222 Z" opacity=".7"/><line x1="94" y1="86" x2="94" y2="104" stroke="#c94c1a"/><line x1="106" y1="86" x2="106" y2="104" stroke="#c94c1a"/></svg>`,
+  coat:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M48 58 L72 50 L92 78 L100 100 L108 78 L128 50 L152 58 L172 86 L182 270 L156 280 L148 110 L148 280 L52 280 L52 110 L44 280 L18 270 L28 86 Z" fill="rgba(244,241,236,.06)"/><path d="M72 50 L80 170 L100 100 L120 170 L128 50" opacity=".85"/><path d="M78 184 L122 184 L122 192 L78 192 Z" fill="rgba(201,76,26,.85)" stroke="none"/><circle cx="82" cy="140" r="2" fill="currentColor" stroke="none"/><circle cx="118" cy="140" r="2" fill="currentColor" stroke="none"/></svg>`,
+  utility:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M76 56 L124 56 L124 76 L76 76 Z" fill="rgba(244,241,236,.06)"/><path d="M76 76 L48 88 L18 106 L12 240 L40 254 L50 110 L50 260 L150 260 L150 110 L160 254 L188 240 L182 106 L152 88 L124 76" fill="rgba(244,241,236,.05)"/><path d="M60 110 L92 110 L92 142 L60 142 Z M108 110 L140 110 L140 142 L108 142 Z" opacity=".85"/><circle cx="100" cy="100" r="2" fill="#c94c1a" stroke="none"/></svg>`,
+  trouser:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M52 30 L148 30 L148 56 L52 56 Z" fill="rgba(244,241,236,.05)"/><path d="M52 56 L46 270 L92 270 L98 64 L102 64 L108 270 L154 270 L148 56" fill="rgba(244,241,236,.05)"/><circle cx="100" cy="46" r="2.5" fill="#c94c1a" stroke="none"/></svg>`,
+  knit:`<svg viewBox="0 0 200 290" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"><path d="M76 60 Q100 50 124 60" opacity=".8"/><path d="M70 70 Q100 60 130 70 L154 80 L182 96 L186 200 L160 216 L150 184 L150 252 L50 252 L50 184 L40 216 L14 200 L18 96 L46 80 Z" fill="rgba(244,241,236,.05)"/><path d="M60 100 L60 240 M80 100 L80 240 M100 100 L100 240 M120 100 L120 240 M140 100 L140 240" opacity=".2"/></svg>`,
+};
+scroller.innerHTML=looks.map((l,i)=>`<a class="look ${l.cls}" data-hot href="Product.html?p=${l.g}">
+  <div class="bg"></div>
+  <div class="garment">${G[l.g]}</div>
+  <span class="num">N°0${i+1}</span>
+  <div class="ttl"><div class="nm"><small>${l.sub}</small>${l.n}</div><div class="pr">${l.pr}</div></div>
+</a>`).join('');
+function updP(){const mx=scroller.scrollWidth-scroller.clientWidth;const p=mx?Math.min(1,scroller.scrollLeft/mx):0;lp.style.width=(8+p*92)+'%'}
+scroller.addEventListener('scroll',updP,{passive:true});updP();
+document.getElementById('lL').onclick=()=>scroller.scrollBy({left:-360,behavior:'smooth'});
+document.getElementById('lR').onclick=()=>scroller.scrollBy({left:360,behavior:'smooth'});
+
+/* ─── product meta + season look sets (for expand panels) ─── */
+const PROD={
+  parka:{nm:'Dome Parka',pr:'¥18,000',cls:'b1'},
+  suit:{nm:'Atelier Suit',pr:'¥24,500',cls:'b2'},
+  bomber:{nm:'Convex Bomber',pr:'¥11,250',cls:'b3'},
+  hoodie:{nm:'Slope Hoodie',pr:'¥8,900',cls:'b4'},
+  coat:{nm:'Structured Coat',pr:'¥32,000',cls:'b5'},
+  utility:{nm:'Utility Jacket',pr:'¥15,500',cls:'b6'},
+  trouser:{nm:'Field Trouser',pr:'¥9,800',cls:'b7'},
+  knit:{nm:'Quiet Knit Crew',pr:'¥12,600',cls:'b8'},
+};
+const ELG={
+  Water:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 21 L3.5 5 L20.5 5 Z"/></svg>',
+  Air:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3 L20.5 19 L3.5 19 Z"/><line x1="7" y1="14" x2="17" y2="14"/></svg>',
+  Earth:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 21 L3.5 5 L20.5 5 Z"/><line x1="7" y1="10" x2="17" y2="10"/></svg>',
+  Fire:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3 L20.5 19 L3.5 19 Z"/></svg>',
+  Aether:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/></svg>',
+};
+const SEASONS={
+  fw23:{label:'FW 23 · TIDE — SALT',el:'Water',accent:'#2e7d8c',pal:['#0d2a33','#1c4a57','#2e7d8c','#8fb6bd'],text:'Indigo, salt, fog — wool dyed in seawater vats and weathered on the Hokkaido coast.',looks:['coat','knit','suit','parka']},
+  ss23:{label:'SS 23 · DRIFT — BREATH',el:'Air',accent:'#5e7480',pal:['#e8e4db','#cfc9bd','#a9a89f','#6e7378'],text:'Linen, paper, breath — pieces weighed in grams and cut to drift with the wind.',looks:['trouser','hoodie','knit','suit']},
+  fw22:{label:'FW 22 · CLAY — FORM',el:'Earth',accent:'#9a6a32',pal:['#3d2e1a','#6a4a28','#9a6a32','#b89064'],text:'Clay, ochre, raw canvas — shapes built like landforms: heavy, grounded, sculptural.',looks:['bomber','parka','utility','coat']},
+  ss22:{label:'SS 22 · EMBER — ORIGIN',el:'Fire',accent:'#c94c1a',pal:['#371609','#7e3216','#c9572a','#e85d2a'],text:'Ember, rust, kiln — the first five pieces, dyed in fire. The colour the house kept.',looks:['suit','trouser','knit','hoodie','coat']},
+  archive:{label:'2019–2021 · VOID — ETHER',el:'Aether',accent:'#7a6488',pal:['#0a0a0a','#2a2630','#7a6488','#b6a9c0'],text:'Smoke, ink, ether — the unbound work that became grumb. Limited stock, on request.',looks:['knit','trouser','suit','hoodie']},
+};
+// render expand grids
+document.querySelectorAll('.egrid').forEach(grid=>{
+  const key=grid.dataset.grid, S=SEASONS[key]; if(!S)return;
+  const elbar = `<div class="elbar"><div class="ellead"><span class="g">${ELG[S.el]||''}</span>${S.el}</div><div class="swatches">${S.pal.map(c=>`<i style="background:${c}"></i>`).join('')}</div><div class="eltext">${S.text}</div></div>`;
+  grid.innerHTML = elbar + S.looks.map((slug,i)=>{const p=PROD[slug];
+    return `<a class="ecard ${p.cls}" href="Product.html?p=${slug}" data-hot>
+      <span class="etag">Look 0${i+1}</span>
+      <div class="egm">${G[slug]}</div>
+      <div class="eadd">+ View piece</div>
+      <div class="einfo"><span class="enm">${p.nm}</span><span class="epr">${p.pr}</span></div>
+    </a>`;}).join('')
+    + `<div class="efoot"><span>${S.label}</span><a href="VOID.html#collections" data-hot>Shop the full volume →</a></div>`;
+});
+// expand toggle (accordion — one open at a time)
+function setExpand(season,open){
+  const ex=season.querySelector('.expand'); if(!ex)return;
+  season.classList.toggle('open',open);
+  ex.style.maxHeight = open ? ex.firstElementChild.scrollHeight+'px' : '0px';
+}
+document.querySelectorAll('.season').forEach(season=>{
+  const row=season.querySelector('.row');
+  row.addEventListener('click',e=>{
+    if(e.target.closest('a'))return;
+    const isOpen=season.classList.contains('open');
+    document.querySelectorAll('.season.open').forEach(s=>{if(s!==season)setExpand(s,false);});
+    setExpand(season,!isOpen);
+    if(!isOpen){ setTimeout(()=>{const y=season.getBoundingClientRect().top+scrollY-80; scrollTo({top:y,behavior:'smooth'});},120); }
+  });
+});
+addEventListener('resize',()=>{document.querySelectorAll('.season.open').forEach(s=>setExpand(s,true));});
+
+/* ─── filters ─── */
+const filtnote=document.getElementById('filtnote');
+document.querySelectorAll('#filters button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#filters button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  const f=b.dataset.f; let shown=0;
+  document.querySelectorAll('.season').forEach(s=>{
+    const match = f==='all' || s.dataset.type===f;
+    s.classList.toggle('hide',!match);
+    if(match)shown++; else setExpand(s,false);
+  });
+  filtnote.classList.toggle('show',shown===0);
+});
+
+/* ─── side season nav + year rail active sync ─── */
+const sideLinks=document.querySelectorAll('.sidenav a');
+const yLinks=document.querySelectorAll('#yrail a');
+const SECID=['s-ss24','s-fw23','s-ss23','s-fw22','s-ss22','s-archive'];
+function updateActive(){
+  const y=scrollY+innerHeight*.4;
+  let active='s-ss24';
+  SECID.forEach(id=>{const el=document.getElementById(id);if(el && el.offsetTop<=y)active=id;});
+  sideLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+active));
+  yLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+active));
+}
+addEventListener('scroll',updateActive,{passive:true});updateActive();
+
+/* ─── cart toast ─── */
+const toast=document.getElementById('toast');
+function showToast(nm,meta){document.getElementById('toastNm').textContent=nm;document.getElementById('toastMeta').textContent=meta;
+  toast.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>toast.classList.remove('show'),2600);}
+(function(){try{const c=JSON.parse(localStorage.getItem('void_cart_v1'))||[];const n=c.reduce((a,b)=>a+(b.qty||0),0);document.querySelectorAll('[data-cartcount]').forEach(el=>el.textContent=String(n).padStart(2,'0'));}catch(e){}})();
+document.getElementById('cartBtn').addEventListener('click',()=>{location.href='Bag.html'});
+</script>
+
+<script>/*__GRUMB_NINJA__*/(function grumbNinja(){
+  if (window.__grumbNinja) return; window.__grumbNinja = true;
+  var REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var THEMES = [
+    {k:'soke',   nm:'Sōke',   el:'Rust · default', rust:'#c8440e', rust2:'#e85a24', paper:'#f4f1ec', ink:'#0a0a0a'},
+    {k:'katon',  nm:'Katon',  el:'Fire',      rust:'#e0432a', rust2:'#ff6a3d', paper:'#f4efe9', ink:'#0c0908'},
+    {k:'suiton', nm:'Suiton', el:'Water',     rust:'#2f86a6', rust2:'#46a9c4', paper:'#edf0f1', ink:'#080c0e'},
+    {k:'futon',  nm:'Fūton',  el:'Wind',      rust:'#4f9e7a', rust2:'#6fc299', paper:'#eef1ed', ink:'#090c0a'},
+    {k:'raiton', nm:'Raiton', el:'Lightning', rust:'#c39a32', rust2:'#e8c25c', paper:'#f3efe5', ink:'#0c0b07'},
+    {k:'kage',   nm:'Kage',   el:'Shadow',    rust:'#7a6488', rust2:'#9a82ab', paper:'#eceaef', ink:'#0a0a0c'}
+  ];
+  function findT(k){ for(var i=0;i<THEMES.length;i++){ if(THEMES[i].k===k) return THEMES[i]; } return THEMES[0]; }
+
+  // compact ninja mascot markup (120-unit coordinate system, scaled by container)
+  function ninjaHTML(){
+    return '<div class="gn-stage"><div class="gn-inner">'+
+      '<div class="gn-tail left"></div><div class="gn-tail right"></div>'+
+      '<div class="gn-mask"></div><div class="gn-head"></div>'+
+      '<div class="gn-band"><div class="gn-eyes"><div class="gn-eye left"></div><div class="gn-eye right"></div></div></div>'+
+    '</div></div>';
+  }
+
+  function apply(k, animate){
+    var t = findT(k);
+    var r = document.documentElement.style;
+    r.setProperty('--rust', t.rust); r.setProperty('--rust2', t.rust2);
+    r.setProperty('--paper', t.paper); r.setProperty('--ink', t.ink);
+    try{ localStorage.setItem('grumb_theme', k); }catch(e){}
+    var opts = document.querySelectorAll('.gn-opt');
+    for (var i=0;i<opts.length;i++){ opts[i].classList.toggle('on', opts[i].getAttribute('data-k')===k); }
+    if (animate){ var st = document.querySelector('.gn-ninja .gn-inner'); if(st){ st.classList.remove('gn-poof'); void st.offsetWidth; st.classList.add('gn-poof'); var b=document.querySelector('.gn-ninja'); if(b) burstSmoke(b.querySelector('.gn-stage'), 12, 60, 56); } }
+  }
+
+  var saved = 'soke'; try{ saved = localStorage.getItem('grumb_theme') || 'soke'; }catch(e){}
+  apply(saved, false);
+
+  var css = document.createElement('style');
+  css.textContent = `
+    /* ===== ninja mascot (120-unit, scaled) ===== */
+    .gn-ninja{position:relative;display:inline-block;vertical-align:middle;width:46px;height:44px;margin-left:10px;background:none;border:0;padding:0;flex:0 0 auto}
+    .gn-ninja .gn-stage{position:absolute;top:50%;left:50%;width:120px;height:120px;transform:translate(-50%,-50%) scale(.34);transform-origin:center;overflow:visible}
+    .gn-inner{position:absolute;inset:0;transform-origin:center bottom;animation:gnFloat 3.2s ease-in-out infinite}
+    .gn-inner.gn-poof{animation:gnFloat 3.2s ease-in-out infinite, gnPoof .6s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes gnFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    @keyframes gnPoof{0%{transform:scale(.7)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+    .gn-head{position:absolute;top:14px;left:10px;width:100px;height:92px;background:var(--ink,#0a0a0a);border-radius:22px 22px 16px 16px;box-shadow:inset -6px -8px 0 rgba(0,0,0,.35)}
+    .gn-head::before{content:'';position:absolute;top:8px;left:14px;width:40px;height:10px;background:#1a1a18;border-radius:8px;opacity:.6}
+    .gn-band{position:absolute;top:46px;left:6px;width:108px;height:26px;background:var(--rust,#c8440e);box-shadow:inset 0 -6px 0 rgba(0,0,0,.18);z-index:3}
+    .gn-eyes{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:22px}
+    .gn-eye{width:22px;height:9px;background:var(--paper,#f4f1ec);border-radius:3px;transform:skewX(-8deg);transition:height .15s ease,transform .15s ease}
+    .gn-eye.right{transform:skewX(8deg)}
+    .gn-tail{position:absolute;top:50px;width:42px;height:20px;background:var(--rust,#c8440e);z-index:2}
+    .gn-tail.left{left:-30px;transform-origin:right center;clip-path:polygon(0 30%,100% 0,100% 100%,0 70%);animation:gnTailL 2s ease-in-out infinite}
+    .gn-tail.right{right:-30px;transform-origin:left center;clip-path:polygon(0 0,100% 30%,100% 70%,0 100%);animation:gnTailR 2.3s ease-in-out infinite}
+    @keyframes gnTailL{0%,100%{transform:rotate(-15deg)}50%{transform:rotate(-30deg) translateX(-3px)}}
+    @keyframes gnTailR{0%,100%{transform:rotate(15deg)}50%{transform:rotate(30deg) translateX(3px)}}
+    .gn-mask{position:absolute;top:72px;left:14px;width:92px;height:34px;background:var(--ink,#0a0a0a);border-radius:0 0 16px 16px;z-index:1;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3)}
+    .gn-eye{animation:gnBlink 4s steps(1) infinite}
+    @keyframes gnBlink{0%,52%,57%,100%{opacity:1}54%{opacity:.12}}
+    /* hover squint */
+    .gn-ninja:hover .gn-inner{animation-play-state:paused;transform:translateY(-3px)}
+    .gn-ninja:hover .gn-eye{height:4px}
+    .gn-ninja:hover .gn-eye.left{transform:skewX(-18deg)}
+    .gn-ninja:hover .gn-eye.right{transform:skewX(18deg)}
+    .gn-ninja:hover .gn-tail.left{animation:none;transform:rotate(-42deg)}
+    .gn-ninja:hover .gn-tail.right{animation:none;transform:rotate(42deg)}
+    .gn-reduce .gn-inner,.gn-reduce .gn-tail,.gn-reduce .gn-eye{animation:none!important}
+    .gn-smoke{position:absolute;border-radius:50%;background:#2a2a28;pointer-events:none;z-index:5}
+    /* ===== theme popover ===== */
+    .gn-pop{position:fixed;top:58px;left:14px;z-index:99990;width:256px;background:#0a0a0a;color:#f4f1ec;border-top:2px solid var(--rust);padding:16px 16px 10px;transform:translateY(-10px);opacity:0;pointer-events:none;transition:opacity .3s cubic-bezier(.16,1,.3,1),transform .3s cubic-bezier(.16,1,.3,1);box-shadow:0 30px 70px -24px rgba(0,0,0,.7)}
+    .gn-pop.open{opacity:1;transform:none;pointer-events:auto}
+    .gn-pop .gn-h{font:10px/1.4 'Space Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:#8a857c;margin-bottom:12px}
+    .gn-opt{display:flex;align-items:center;gap:13px;padding:9px 8px;background:none;border:0;color:#f4f1ec;text-align:left;width:100%;cursor:pointer;transition:background .2s}
+    .gn-opt:hover,.gn-opt.on{background:rgba(244,241,236,.06)}
+    .gn-chip{width:26px;height:18px;flex:0 0 auto;border-radius:4px;position:relative;display:flex;align-items:center;justify-content:center;gap:4px}
+    .gn-chip i{width:5px;height:3px;background:#f4f1ec;border-radius:1px;transform:skewX(-8deg)}
+    .gn-nm{font-family:'Bebas Neue',sans-serif;font-size:19px;line-height:1;letter-spacing:.04em;display:flex;flex-direction:column;gap:3px}
+    .gn-nm small{font:9px/1 'Space Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:#8a857c}
+    .gn-opt.on .gn-nm small{color:var(--rust)}
+    /* ===== intro ===== */
+    #gnIntro{position:fixed;inset:0;z-index:100000;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+    #gnIntro .gn-bigninja{position:relative;width:150px;height:150px;margin-bottom:24px;opacity:0;transform:scale(.6)}
+    #gnIntro.play .gn-bigninja{transition:opacity .5s,transform .55s cubic-bezier(.34,1.56,.64,1);opacity:1;transform:scale(1)}
+    #gnIntro .gn-bigninja .gn-stage{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1.18);transform-origin:center}
+    #gnIntro .gn-iword{display:flex;align-items:flex-end;overflow:hidden;padding:0 .08em .14em;font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(78px,13vw,168px);line-height:.9;letter-spacing:.03em;color:#f4f1ec}
+    #gnIntro .gn-iword span,#gnIntro .gn-iword b{display:inline-block;transform:translateY(120%)}
+    #gnIntro .gn-iword b{color:var(--rust);font-weight:400}
+    #gnIntro.play .gn-iword span,#gnIntro.play .gn-iword b{animation:gnRise .9s cubic-bezier(.16,1,.3,1) forwards}
+    #gnIntro.play .gn-iword span:nth-child(1){animation-delay:.55s}
+    #gnIntro.play .gn-iword span:nth-child(2){animation-delay:.62s}
+    #gnIntro.play .gn-iword span:nth-child(3){animation-delay:.69s}
+    #gnIntro.play .gn-iword span:nth-child(4){animation-delay:.76s}
+    #gnIntro.play .gn-iword span:nth-child(5){animation-delay:.83s}
+    #gnIntro.play .gn-iword b{animation-delay:.91s}
+    #gnIntro .gn-iline{width:0;height:1px;background:var(--rust);margin-top:24px}
+    #gnIntro.play .gn-iline{animation:gnLine .7s cubic-bezier(.16,1,.3,1) 1.05s forwards}
+    #gnIntro .gn-itag{margin-top:20px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:#8a857c;opacity:0}
+    #gnIntro.play .gn-itag{animation:gnFade .8s ease 1.2s forwards}
+    #gnIntro.out{clip-path:inset(0 0 100% 0);transition:clip-path .9s cubic-bezier(.76,0,.24,1)}
+    @keyframes gnRise{to{transform:translateY(0)}}
+    @keyframes gnLine{to{width:min(300px,62vw)}}
+    @keyframes gnFade{to{opacity:1}}
+  `;
+  document.head.appendChild(css);
+  if (REDUCE) document.documentElement.classList.add('gn-reduce');
+
+  function burstSmoke(container, count, ox, oy){
+    if(!container) return;
+    for(var i=0;i<count;i++){
+      var s=document.createElement('div'); s.className='gn-smoke';
+      var sz=6+Math.random()*10; s.style.width=sz+'px'; s.style.height=sz+'px';
+      s.style.left=ox+'px'; s.style.top=oy+'px'; s.style.opacity='.35';
+      container.appendChild(s);
+      (function(s){
+        var ang=Math.random()*Math.PI*2, sp=2+Math.random()*5, vx=Math.cos(ang)*sp, vy=Math.sin(ang)*sp, x=ox, y=oy, op=.35;
+        (function step(){ x+=vx; y+=vy; vx*=.92; vy*=.92; op-=.014; s.style.left=x+'px'; s.style.top=y+'px'; s.style.opacity=Math.max(0,op); if(op>0) requestAnimationFrame(step); else s.remove(); })();
+      })(s);
+    }
+  }
+
+  function buildMark(){
+    var brand=document.querySelector('.nav .brand'); if(!brand || brand.querySelector('.gn-ninja')) return;
+    var anchor=brand.querySelector('a')||brand.querySelector('span');
+    var btn=document.createElement('button');
+    btn.className='gn-ninja'; btn.setAttribute('data-hot',''); btn.setAttribute('aria-label','Choose element theme');
+    btn.innerHTML=ninjaHTML();
+    if(anchor && anchor.nextSibling) brand.insertBefore(btn, anchor.nextSibling); else brand.appendChild(btn);
+    btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); togglePop(); });
+  }
+
+  var pop=null;
+  function buildPop(){
+    pop=document.createElement('div'); pop.className='gn-pop';
+    var html='<div class="gn-h">Choose your element</div>';
+    for(var i=0;i<THEMES.length;i++){ var t=THEMES[i];
+      html+='<button class="gn-opt" data-hot data-k="'+t.k+'"><span class="gn-chip" style="background:'+t.rust+'"><i></i><i></i></span><span class="gn-nm">'+t.nm+'<small>'+t.el+'</small></span></button>';
+    }
+    pop.innerHTML=html; document.body.appendChild(pop);
+    pop.addEventListener('click', function(e){ var o=e.target.closest('.gn-opt'); if(!o) return; apply(o.getAttribute('data-k'), true); setTimeout(closePop,180); });
+    document.addEventListener('click', function(e){ if(pop.classList.contains('open') && !e.target.closest('.gn-pop') && !e.target.closest('.gn-ninja')) closePop(); });
+    apply(saved,false);
+  }
+  function togglePop(){ pop.classList.contains('open')?closePop():pop.classList.add('open'); }
+  function closePop(){ pop.classList.remove('open'); }
+
+  function intro(){
+    var played=false; try{ played=sessionStorage.getItem('grumb_ninja_intro')==='1'; }catch(e){}
+    
+    var ov=document.createElement('div'); ov.id='gnIntro';
+    ov.innerHTML=
+      '<div class="gn-iword"><span>g</span><span>r</span><span>u</span><span>m</span><span>b</span><b>.</b></div>'+
+      '<div class="gn-iline"></div><div class="gn-itag">the art of staying unseen</div>';
+    document.body.appendChild(ov); document.body.style.overflow='hidden';
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('play');  }); });
+    setTimeout(function(){ ov.classList.add('out'); setTimeout(function(){ ov.remove(); document.body.style.overflow=''; }, 920); }, 2450);
+    try{ sessionStorage.setItem('grumb_ninja_intro','1'); }catch(e){}
+  }
+
+  window.grumbBurst = burstSmoke;
+  function init(){ buildPop(); intro(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();</script>
+</body>
+</html>
